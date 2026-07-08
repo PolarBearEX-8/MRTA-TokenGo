@@ -1,0 +1,2 @@
+.plain { border: 0; background: transparent; padding: 0; cursor: pointer; }
+.primary:disabled { cursor: not-allowed; opacity: .45; }
