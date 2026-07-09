@@ -1,12 +1,25 @@
 import { useEffect, useState } from 'react';
 
+type View = 'home' | 'checkout' | 'tickets' | 'machine' | 'wallet';
+type Route = { origin: string; destination: string };
+type Go = (id: View) => void;
+type Step = 'queue' | 'scan' | 'success';
+
 const STATIONS = ['สุขุมวิท', 'พระราม 9', 'ศูนย์วัฒนธรรมฯ', 'ลาดพร้าว', 'สีลม', 'สามย่าน', 'หัวลำโพง', 'สนามไชย'];
 
-function Header({ go }) {
+function Header({ go }: { go: Go }) {
   return <header className="topbar"><button className="brand plain" onClick={() => go('home')}><span className="brand-mark">V</span><span>via<span>MRT</span></span></button><div className="top-actions"><button className="icon-button" aria-label="การแจ้งเตือน">●<span className="dot" /></button><button className="avatar">NP</button></div></header>;
 }
 
-function Home({ go, origin, setOrigin, destination, setDestination }) {
+type HomeProps = {
+  go: Go;
+  origin: string;
+  setOrigin: (value: string) => void;
+  destination: string;
+  setDestination: (value: string) => void;
+};
+
+function Home({ go, origin, setOrigin, destination, setDestination }: HomeProps) {
   const swap = () => { const old = origin; setOrigin(destination); setDestination(old); };
   return <>
     <div className="hello"><p>สวัสดีตอนเช้า</p><h1>ไปไหนต่อดี<br/><em>วันนี้?</em></h1></div>
@@ -26,7 +39,9 @@ function Home({ go, origin, setOrigin, destination, setDestination }) {
   </>;
 }
 
-function RouteTicket({ origin, destination, live = false }) {
+type RouteTicketProps = Route & { live?: boolean };
+
+function RouteTicket({ origin, destination, live = false }: RouteTicketProps) {
   return <article className={live ? 'live-ticket' : 'ticket-preview'}>
     <div className="ticket-top"><span>{live ? 'SMART TOKEN' : 'BLUE LINE'}</span><b>ACTIVE</b></div>
     {live && <div className="ticket-code">STT—10293</div>}
@@ -35,16 +50,16 @@ function RouteTicket({ origin, destination, live = false }) {
   </article>;
 }
 
-function Checkout({ go, route, pay }) {
+function Checkout({ go, route, pay }: { go: Go; route: Route; pay: () => void }) {
   return <><button className="back" onClick={() => go('home')}>← กลับ</button><span className="eyebrow">ตรวจสอบรายการ</span><h1>พร้อมออกเดินทาง</h1><RouteTicket {...route}/><div className="summary card"><h3>สรุปค่าใช้จ่าย</h3><p><span>ค่าโดยสาร</span><b>฿28.00</b></p><p><span>ค่าบริการ</span><b>฿0.00</b></p><hr/><p className="total"><span>ยอดชำระ</span><b>฿28.00</b></p></div><div className="payment card"><span className="wallet-icon">฿</span><div><b>Cash Balance</b><small>ยอดคงเหลือ ฿124.00</small></div><i>✓</i></div><button className="primary full" onClick={pay}>ยืนยันและชำระ ฿28 <span>→</span></button></>;
 }
 
-function Tickets({ go, route }) {
+function Tickets({ go, route }: { go: Go; route: Route }) {
   return <><button className="back" onClick={() => go('home')}>← กลับ</button><span className="eyebrow">ตั๋วของฉัน</span><h1>พร้อมรับ Token</h1><RouteTicket {...route} live/><div className="info-strip"><span>ⓘ</span><p><b>ปลอดภัยกว่า QR แบบเดิม</b><small>QR ที่ตู้มีอายุเพียง 45 วินาที และใช้ได้ครั้งเดียว</small></p></div><button className="primary full" onClick={() => go('machine')}>ไปที่ Express Machine <span>→</span></button></>;
 }
 
-function Machine({ go }) {
-  const [step, setStep] = useState('queue');
+function Machine({ go }: { go: Go }) {
+  const [step, setStep] = useState<Step>('queue');
   useEffect(() => { if (step !== 'scan') return; const id = setTimeout(() => setStep('success'), 1900); return () => clearTimeout(id); }, [step]);
   const finish = () => { if (step === 'queue') setStep('scan'); else if (step === 'success') { setStep('queue'); go('home'); } };
   return <><button className="back" onClick={() => go('tickets')}>← ตั๋วของฉัน</button><span className="eyebrow">EXPRESS MACHINE · BL21</span><h1>{step === 'queue' ? 'รับ Token แบบด่วน' : step === 'scan' ? 'สแกน QR จากหน้าตู้' : 'เดินทางได้เลย'}</h1>
@@ -55,22 +70,23 @@ function Machine({ go }) {
   </>;
 }
 
-function Wallet({ go }) {
-  const items = [['↙','คืนเงินตั๋วหมดอายุ','STT—09112 · 6 ก.ค.','+฿28',true],['↗','จอง Token · สายสีน้ำเงิน','STT—10293 · วันนี้','−฿28'],['+','เติม Cash Balance','PromptPay · 2 ก.ค.','+฿100',true]];
+function Wallet({ go }: { go: Go }) {
+  const items: [string, string, string, string, boolean?][] = [['↙','คืนเงินตั๋วหมดอายุ','STT—09112 · 6 ก.ค.','+฿28',true],['↗','จอง Token · สายสีน้ำเงิน','STT—10293 · วันนี้','−฿28'],['+','เติม Cash Balance','PromptPay · 2 ก.ค.','+฿100',true]];
   return <><button className="back" onClick={() => go('home')}>← กลับ</button><span className="eyebrow">กระเป๋าของฉัน</span><h1>Cash Balance</h1><article className="wallet-hero"><small>ยอดเงินพร้อมใช้</small><strong>฿124.00</strong><span>อัปเดตเมื่อสักครู่</span></article><div className="quick-head"><h2>รายการล่าสุด</h2><button>ดูทั้งหมด</button></div><div className="transactions">{items.map(([icon,title,meta,amount,credit]) => <div key={title}><i className={credit ? 'credit' : ''}>{icon}</i><p><b>{title}</b><small>{meta}</small></p><strong className={credit ? 'plus' : ''}>{amount}</strong></div>)}</div><button className="secondary full">ยื่นคำขอคืนเงินจริง</button></>;
 }
 
-function Nav({ view, go }) {
-  return <nav className="bottom-nav">{[['home','⌂','หน้าหลัก'],['tickets','◫','ตั๋ว'],['machine','⌁','สแกน'],['wallet','◉','กระเป๋า']].map(([id,icon,label]) => <button key={id} className={`${view === id ? 'nav-active ' : ''}${id === 'machine' ? 'scan-nav' : ''}`} onClick={() => go(id)}><span>{icon}</span>{label}</button>)}</nav>;
+function Nav({ view, go }: { view: View; go: Go }) {
+  const tabs: [View, string, string][] = [['home','⌂','หน้าหลัก'],['tickets','◫','ตั๋ว'],['machine','⌁','สแกน'],['wallet','◉','กระเป๋า']];
+  return <nav className="bottom-nav">{tabs.map(([id,icon,label]) => <button key={id} className={`${view === id ? 'nav-active ' : ''}${id === 'machine' ? 'scan-nav' : ''}`} onClick={() => go(id)}><span>{icon}</span>{label}</button>)}</nav>;
 }
 
 export default function App() {
-  const [view, setView] = useState('home');
+  const [view, setView] = useState<View>('home');
   const [origin, setOrigin] = useState('สุขุมวิท');
   const [destination, setDestination] = useState('สีลม');
   const [toast, setToast] = useState(false);
-  const go = id => { setView(id); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+  const go: Go = id => { setView(id); window.scrollTo({ top: 0, behavior: 'smooth' }); };
   const pay = () => { setToast(true); setTimeout(() => setToast(false), 2200); setTimeout(() => go('tickets'), 350); };
-  const route = { origin, destination };
+  const route: Route = { origin, destination };
   return <><div className="ambient ambient-a"/><div className="ambient ambient-b"/><main className="shell"><Header go={go}/><section className={`view active ${view !== 'home' ? 'subview' : ''}`}>{view === 'home' && <Home go={go} origin={origin} setOrigin={setOrigin} destination={destination} setDestination={setDestination}/>} {view === 'checkout' && <Checkout go={go} route={route} pay={pay}/>} {view === 'tickets' && <Tickets go={go} route={route}/>} {view === 'machine' && <Machine go={go}/>} {view === 'wallet' && <Wallet go={go}/>}</section><Nav view={view} go={go}/></main><div className={`toast ${toast ? 'show' : ''}`}>ชำระเงินสำเร็จ — ตั๋วพร้อมใช้งาน</div></>;
 }
