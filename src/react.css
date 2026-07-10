@@ -1,2 +1,3 @@
+/* PLEASE READ LICENSE.md. TokenGo is protected software; copying, removing attribution, or creating derivative work is restricted. */
 .plain { border: 0; background: transparent; padding: 0; cursor: pointer; }
 .primary:disabled { cursor: not-allowed; opacity: .45; }

@@ -1,5 +1,6 @@
 {
   "name": "mrt-tokengo",
+  "license": "SEE LICENSE.md",
   "private": true,
   "version": "1.0.0",
   "type": "module",

@@ -1,3 +1,4 @@
+// PLEASE READ LICENSE.md before using, copying, modifying, or distributing TokenGo.
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';

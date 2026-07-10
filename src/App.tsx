@@ -1,3 +1,4 @@
+// PLEASE READ LICENSE.md. TokenGo is protected software. Do not copy, rename, remove attribution, or submit derivative work without permission.
 import { useEffect, useState } from 'react';
 import './welcome.css';
 
