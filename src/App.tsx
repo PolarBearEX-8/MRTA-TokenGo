@@ -38,7 +38,7 @@ const purpleLineStations = [
   { code: 'PP09', nameTh: 'แยกนนทบุรี 1', nameEn: 'Yaek Nonthaburi 1' }, { code: 'PP10', nameTh: 'บางกระสอ', nameEn: 'Bang Krasor' },
   { code: 'PP11', nameTh: 'ศูนย์ราชการนนทบุรี', nameEn: 'Nonthaburi Civic Center' }, { code: 'PP12', nameTh: 'กระทรวงสาธารณสุข', nameEn: 'Ministry of Public Health' },
   { code: 'PP13', nameTh: 'แยกติวานนท์', nameEn: 'Yaek Tiwanon' }, { code: 'PP14', nameTh: 'วงศ์สว่าง', nameEn: 'Wong Sawang' },
-  { code: 'PP15', nameTh: 'บางซ่อน', nameEn: 'Bang Son' }, { code: 'PP16', nameTh: 'เตาปูน', nameEn: 'Tao Poon' },
+  { code: 'PP15', nameTh: 'บางซ่อน', nameEn: 'Bang Son' }, { code: 'PP16', nameTh: 'เตาปูน (สายสีม่วง)', nameEn: 'Tao Poon' },
 ];
 
 const metroStations = [...blueLineStations, ...purpleLineStations];
@@ -231,13 +231,46 @@ function Nav({ view, go }: { view: View; go: Go }) {
   return <nav className="bottom-nav">{tabs.map(([id,icon,label]) => <button key={id} className={`${view === id ? 'nav-active ' : ''}${id === 'booking' ? 'scan-nav' : ''}`} onClick={() => go(id)}><span><Icon name={icon} /></span>{label}</button>)}</nav>;
 }
 
-function WelcomePage({ onSimulate }: { onSimulate: () => void }) {
-  return <main className="welcome-page"><div className="welcome-glow welcome-glow-a"/><div className="welcome-glow welcome-glow-b"/><section className="welcome-shell"><header className="welcome-header"><div className="welcome-brand"><span className="welcome-mark">M</span><span>MRT<span> - TokenGo</span></span></div><span className="welcome-status"><i/> Blue Line</span></header><div className="welcome-hero"><span className="welcome-kicker">SMART TRANSIT TOKEN</span><h1>เดินทางง่ายขึ้น<br/><em>เริ่มต้นได้ที่นี่</em></h1><p>วางแผนเส้นทาง จอง Token และติดตามการเดินทางของคุณในที่เดียว</p><button className="welcome-cta" onClick={onSimulate}>เข้าสู่ Simulate App <span>→</span></button></div><div className="welcome-orbit"><div className="welcome-orbit-inner"><span>BL</span><strong>01</strong></div><i className="orbit-dot orbit-dot-a"/><i className="orbit-dot orbit-dot-b"/></div><div className="welcome-features"><article><span><Icon name="map"/></span><b>วางแผนเส้นทาง</b><small>เลือกสถานีที่ต้องการเดินทาง</small></article><article><span><Icon name="plus"/></span><b>จอง Token</b><small>รับ Token ได้ง่ายและรวดเร็ว</small></article><article><span><Icon name="scan"/></span><b>ดูแผนที่</b><small>ติดตามเส้นทางสายสีน้ำเงิน</small></article></div><footer className="welcome-footer"><span>พร้อมเดินทางไปกับคุณ</span><span>v1.0 · MRT Bangkok</span></footer></section></main>;
+function WelcomePage({ onSimulate, onInteractiveMap }: { onSimulate: () => void; onInteractiveMap: () => void }) {
+  return <main className="welcome-page"><div className="welcome-glow welcome-glow-a"/><div className="welcome-glow welcome-glow-b"/><section className="welcome-shell"><header className="welcome-header"><div className="welcome-brand"><span className="welcome-mark">M</span><span>MRT<span> - TokenGo</span></span></div><span className="welcome-status"><i/> Blue Line</span></header><div className="welcome-hero"><span className="welcome-kicker">SMART TRANSIT TOKEN</span><h1>เดินทางง่ายขึ้น<br/><em>เริ่มต้นได้ที่นี่</em></h1><p>วางแผนเส้นทาง จอง Token และติดตามการเดินทางของคุณในที่เดียว</p><div className="welcome-actions"><button className="welcome-cta" onClick={onSimulate}>เข้าสู่ Simulate App <span>→</span></button><button className="welcome-map-cta" onClick={onInteractiveMap}><Icon name="map"/> แผนที่ Interactive</button></div></div><div className="welcome-orbit"><div className="welcome-orbit-inner"><span>BL</span><strong>01</strong></div><i className="orbit-dot orbit-dot-a"/><i className="orbit-dot orbit-dot-b"/></div><div className="welcome-features"><article><span><Icon name="map"/></span><b>วางแผนเส้นทาง</b><small>เลือกสถานีที่ต้องการเดินทาง</small></article><article><span><Icon name="plus"/></span><b>จอง Token</b><small>รับ Token ได้ง่ายและรวดเร็ว</small></article><article><span><Icon name="scan"/></span><b>ดูแผนที่</b><small>ติดตามเส้นทางสายสีน้ำเงิน</small></article></div><footer className="welcome-footer"><span>พร้อมเดินทางไปกับคุณ</span><span>v1.0 · MRT Bangkok</span></footer></section></main>;
 }
 
 export default function App() {
-  const [showSimulate, setShowSimulate] = useState(false);
-  return showSimulate ? <SimulateApp onWelcome={() => setShowSimulate(false)}/> : <WelcomePage onSimulate={() => setShowSimulate(true)}/>;
+  const [screen, setScreen] = useState<'welcome' | 'simulate' | 'interactive-map'>('welcome');
+  if (screen === 'simulate') return <SimulateApp onWelcome={() => setScreen('welcome')}/>;
+  if (screen === 'interactive-map') return <InteractiveMapPage onBack={() => setScreen('welcome')}/>;
+  return <WelcomePage onSimulate={() => setScreen('simulate')} onInteractiveMap={() => setScreen('interactive-map')}/>;
+}
+
+const blueMapHotspots = [
+  [16.6, 76.1], [16.6, 72.5], [16.6, 69.1], [16.6, 65.8], [16.6, 62.5], [16.6, 59.4], [16.8, 56.2], [17.8, 53.4], [19.1, 50.3], [21.7, 47.4],
+  [24.0, 47.4], [27.3, 47.4], [28.5, 43.0], [30.0, 39.4], [31.3, 39.2], [32.6, 43.0], [33.6, 45.7], [34.8, 48.7], [35.0, 51.8], [35.0, 55.0],
+  [35.0, 58.2], [35.0, 61.4], [35.0, 64.6], [34.7, 67.1], [33.0, 69.6], [30.8, 69.6], [29.0, 69.6], [27.0, 69.6], [25.1, 69.6], [23.4, 69.6],
+  [21.6, 69.6], [19.8, 72.6], [17.8, 73.7], [14.0, 70.1], [12.0, 70.1], [10.0, 70.1], [8.0, 70.1], [6.1, 70.1],
+] as const;
+
+const purpleMapHotspots = [
+  [2.0, 22.6], [2.0, 26.7], [3.4, 30.2], [5.2, 30.2], [7.2, 30.2], [9.2, 30.2], [11.2, 30.2], [13.0, 30.2], [14.8, 30.2], [16.6, 30.2],
+  [18.3, 30.2], [18.3, 33.6], [19.8, 36.4], [21.3, 39.2], [21.3, 42.4], [21.3, 47.3],
+] as const;
+
+const officialMapHotspots: Record<string, { x: number; y: number }> = Object.fromEntries([
+  ...blueLineStations.map((station, index) => [station.code, { x: blueMapHotspots[index][0], y: blueMapHotspots[index][1] }]),
+  ...purpleLineStations.map((station, index) => [station.code, { x: purpleMapHotspots[index][0], y: purpleMapHotspots[index][1] }]),
+]);
+
+function InteractiveMapPage({ onBack }: { onBack: () => void }) {
+  const [originCode, setOriginCode] = useState<string | null>(null);
+  const [destinationCode, setDestinationCode] = useState<string | null>(null);
+  const origin = metroStations.find(station => station.code === originCode);
+  const destination = metroStations.find(station => station.code === destinationCode);
+  const journey = origin && destination ? calculateJourney(origin.nameTh, destination.nameTh) : null;
+  const selectStation = (code: string) => {
+    if (!originCode || destinationCode) { setOriginCode(code); setDestinationCode(null); return; }
+    if (code !== originCode) setDestinationCode(code);
+  };
+
+  return <main className="interactive-map-page"><header className="interactive-map-header"><button className="map-back" onClick={onBack}>← กลับ Welcome</button><div><span>INTERACTIVE MRT MAP</span><h1>เลือกสถานีบนแผนที่</h1></div><button className="map-reset" onClick={() => { setOriginCode(null); setDestinationCode(null); }}>เริ่มใหม่</button></header><section className="interactive-map-layout"><div className="interactive-map-canvas"><div className="official-map-stage"><img className="official-mrt-map" src="https://admin.bemplc.co.th/Upload/aw3-Mapweb160623_62708928_1688088179..jpg" alt="แผนที่รถไฟฟ้า MRT จาก BEM"/>{metroStations.map(station => { const point = officialMapHotspots[station.code]; return point && <button key={station.code} className={`map-hotspot ${station.code.startsWith('BL') ? 'blue' : 'purple'} ${station.code === originCode ? 'origin' : ''} ${station.code === destinationCode ? 'destination' : ''}`} style={{ left: `${point.x}%`, top: `${point.y}%` }} onClick={() => selectStation(station.code)} aria-label={`เลือก ${station.nameTh} ${station.code}`}><span>{station.code}</span></button>; })}</div><div className="map-legend"><span><i className="blue"/>สายสีน้ำเงิน</span><span><i className="purple"/>สายสีม่วง</span><span>กดจุดบนแผนที่เพื่อเลือกสถานี</span></div><div className="map-station-picker">{metroStations.map(station => <button key={station.code} className={`${station.code.startsWith('BL') ? 'blue' : 'purple'} ${station.code === originCode ? 'origin' : ''} ${station.code === destinationCode ? 'destination' : ''}`} onClick={() => selectStation(station.code)}><b>{station.code}</b><span>{station.nameTh}</span></button>)}</div></div><aside className="interactive-map-info"><span className="map-info-kicker">ROUTE SELECTION</span><div className="map-selection"><small>ต้นทาง</small><b>{origin ? `${origin.nameTh} (${origin.code})` : 'กดเลือกสถานีแรก'}</b></div><div className="map-selection"><small>ปลายทาง</small><b>{destination ? `${destination.nameTh} (${destination.code})` : 'กดเลือกสถานีที่สอง'}</b></div>{journey && <div className="map-result"><span>{journey.stationCount} สถานี</span><span>{Math.max(1, journey.stationCount * 3)} นาทีโดยประมาณ</span><strong>฿{journey.fare}</strong></div>}<p>กดจุดสถานีบนแผนที่ครั้งแรกเพื่อตั้งต้นทาง และครั้งที่สองเพื่อตั้งปลายทาง ระบบจะคำนวณราคาให้ทันที</p></aside></section></main>;
 }
 
 function DebugPanel({ view, route, go, setOrigin, setDestination, showToast, reset }: { view: View; route: Route; go: Go; setOrigin: (value: string) => void; setDestination: (value: string) => void; showToast: () => void; reset: () => void }) {
