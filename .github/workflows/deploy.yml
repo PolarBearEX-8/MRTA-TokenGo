@@ -37,7 +37,7 @@ jobs:
         run: npm ci
 
       - name: Build
-        run: npm run build -- --base=/Token-Smart-Queue/
+        run: npm run build -- --base=./
 
       - name: Upload Pages Artifact
         uses: actions/upload-pages-artifact@v3
