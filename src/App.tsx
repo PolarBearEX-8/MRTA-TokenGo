@@ -1,5 +1,5 @@
 // PLEASE READ LICENSE.md. TokenGo is protected software. Do not copy, rename, remove attribution, or submit derivative work without permission.
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type MouseEvent } from 'react';
 import './welcome.css';
 
 type View = 'home' | 'checkout' | 'booking' | 'planner' | 'map' | 'machine' | 'wallet';
@@ -30,17 +30,44 @@ const blueLineStations = [
   { code: 'BL37', nameTh: 'บางแค', nameEn: 'Bang Khae' }, { code: 'BL38', nameTh: 'หลักสอง', nameEn: 'Lak Song' },
 ];
 
-const fareTable: Record<number, number> = {
+const purpleLineStations = [
+  { code: 'PP01', nameTh: 'คลองบางไผ่', nameEn: 'Khlong Bang Phai' }, { code: 'PP02', nameTh: 'ตลาดบางใหญ่', nameEn: 'Talad Bang Yai' },
+  { code: 'PP03', nameTh: 'สามแยกบางใหญ่', nameEn: 'Sam Yaek Bang Yai' }, { code: 'PP04', nameTh: 'บางพลู', nameEn: 'Bang Phlu' },
+  { code: 'PP05', nameTh: 'บางรักใหญ่', nameEn: 'Bang Rak Yai' }, { code: 'PP06', nameTh: 'บางรักน้อยท่าอิฐ', nameEn: 'Bang Rak Noi Tha It' },
+  { code: 'PP07', nameTh: 'ไทรม้า', nameEn: 'Sai Ma' }, { code: 'PP08', nameTh: 'สะพานพระนั่งเกล้า', nameEn: 'Phra Nang Klao Bridge' },
+  { code: 'PP09', nameTh: 'แยกนนทบุรี 1', nameEn: 'Yaek Nonthaburi 1' }, { code: 'PP10', nameTh: 'บางกระสอ', nameEn: 'Bang Krasor' },
+  { code: 'PP11', nameTh: 'ศูนย์ราชการนนทบุรี', nameEn: 'Nonthaburi Civic Center' }, { code: 'PP12', nameTh: 'กระทรวงสาธารณสุข', nameEn: 'Ministry of Public Health' },
+  { code: 'PP13', nameTh: 'แยกติวานนท์', nameEn: 'Yaek Tiwanon' }, { code: 'PP14', nameTh: 'วงศ์สว่าง', nameEn: 'Wong Sawang' },
+  { code: 'PP15', nameTh: 'บางซ่อน', nameEn: 'Bang Son' }, { code: 'PP16', nameTh: 'เตาปูน', nameEn: 'Tao Poon' },
+];
+
+const metroStations = [...blueLineStations, ...purpleLineStations];
+
+// MRT adult fare (บาท): 17–44 บาท, capped at 44 บาท from 13 stations onward.
+// Source: mrta-fare-cal.md / BEM Fare Calculation.
+const adultFareByStationCount: Record<number, number> = {
   1: 17, 2: 19, 3: 21, 4: 24, 5: 26, 6: 28, 7: 31, 8: 33, 9: 35,
   10: 37, 11: 40, 12: 42, 13: 44, 14: 44, 15: 44, 16: 44, 17: 44,
   18: 44, 19: 44,
 };
 
-const blueLineGraph = Object.fromEntries(blueLineStations.map((station, index) => {
-  const previous = blueLineStations[(index - 1 + blueLineStations.length) % blueLineStations.length].code;
-  const next = blueLineStations[(index + 1) % blueLineStations.length].code;
-  return [station.code, [previous, next]];
-})) as Record<string, string[]>;
+const purpleAdultFareByStationCount: Record<number, number> = {
+  0: 0, 1: 17, 2: 19, 3: 21, 4: 24, 5: 26, 6: 28, 7: 31, 8: 35,
+  9: 37, 10: 38, 11: 40, 12: 42, 13: 42, 14: 42, 15: 42,
+};
+
+function createLineGraph(stations: typeof blueLineStations) {
+  return Object.fromEntries(stations.map((station, index) => {
+  const adjacentStations = [stations[index - 1], stations[index + 1]]
+    .filter((candidate): candidate is typeof station => Boolean(candidate))
+    .map(candidate => candidate.code);
+  return [station.code, adjacentStations];
+  })) as Record<string, string[]>;
+}
+
+const metroGraph = { ...createLineGraph(blueLineStations), ...createLineGraph(purpleLineStations) };
+metroGraph.BL10.push('PP16');
+metroGraph.PP16.push('BL10');
 
 type Journey = { codes: string[]; stationCount: number; fare: number };
 
@@ -51,7 +78,7 @@ function findShortestRoute(originCode: string, destinationCode: string) {
     const path = queue.shift()!;
     const current = path[path.length - 1];
     if (current === destinationCode) return path;
-    for (const next of blueLineGraph[current] ?? []) {
+    for (const next of metroGraph[current] ?? []) {
       if (!visited.has(next)) { visited.add(next); queue.push([...path, next]); }
     }
   }
@@ -59,14 +86,19 @@ function findShortestRoute(originCode: string, destinationCode: string) {
 }
 
 function calculateJourney(origin: string, destination: string): Journey {
-  const originStation = blueLineStations.find(station => station.nameTh === origin);
-  const destinationStation = blueLineStations.find(station => station.nameTh === destination);
+  const originStation = metroStations.find(station => station.nameTh === origin);
+  const destinationStation = metroStations.find(station => station.nameTh === destination);
   if (!originStation || !destinationStation || originStation.code === destinationStation.code) {
     return { codes: originStation ? [originStation.code] : [], stationCount: 0, fare: 0 };
   }
   const codes = findShortestRoute(originStation.code, destinationStation.code);
   const stationCount = Math.max(0, codes.length - 1);
-  return { codes, stationCount, fare: fareTable[stationCount] ?? 44 };
+  const blueSegments = codes.filter(code => code.startsWith('BL')).length - 1;
+  const purpleSegments = codes.filter(code => code.startsWith('PP')).length - 1;
+  const blueFare = blueSegments > 0 ? adultFareByStationCount[blueSegments] ?? 44 : 0;
+  const purpleFare = purpleSegments > 0 ? purpleAdultFareByStationCount[purpleSegments] ?? 42 : 0;
+  const fare = blueFare && purpleFare ? blueFare + purpleFare - 17 : blueFare || purpleFare;
+  return { codes, stationCount, fare };
 }
 
 function Icon({ name }: { name: IconName }) {
@@ -74,8 +106,14 @@ function Icon({ name }: { name: IconName }) {
   return <svg viewBox="0 0 24 24" aria-hidden="true"><path d={paths[name]} /></svg>;
 }
 
+function BellIcon() {
+  return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" /></svg>;
+}
+
 function Header({ go }: { go: Go }) {
-  return <header className="topbar"><button className="brand plain" onClick={() => go('home')}><span className="brand-mark">M</span><span>Token<span>Go</span></span></button><div className="top-actions"><button className="icon-button" aria-label="การแจ้งเตือน">●<span className="dot" /></button><button className="avatar">NP</button></div></header>;
+  const [profileOpen, setProfileOpen] = useState(false);
+  const openView = (view: View) => { setProfileOpen(false); go(view); };
+  return <header className="topbar"><button className="brand plain" onClick={() => go('home')}><span className="brand-mark">M</span><span>Token<span>Go</span></span></button><div className="top-actions"><button className="icon-button" onClick={() => go('map')} aria-label="เปิดแผนที่"><Icon name="map" /></button><button className="avatar" onClick={() => setProfileOpen(current => !current)} aria-expanded={profileOpen} aria-label="เปิดโปรไฟล์">NP</button>{profileOpen && <div className="profile-slider"><button type="button" onClick={() => openView('home')}><BellIcon /><span>Notify</span><i className="dot" /></button><button type="button" onClick={() => openView('wallet')}><Icon name="wallet" /><span>กระเป๋า</span></button></div>}</div></header>;
 }
 
 type HomeProps = {
@@ -88,10 +126,29 @@ type HomeProps = {
 
 function StationSelect({ id, label, value, onChange }: { id: string; label: string; value: string; onChange: (value: string) => void }) {
   const [open, setOpen] = useState(false);
-  const selected = blueLineStations.find(station => station.nameTh === value) ?? blueLineStations[0];
+  const [query, setQuery] = useState('');
+  const selected = metroStations.find(station => station.nameTh === value) ?? metroStations[0];
+  const filteredStations = metroStations.filter(station => {
+    const search = query.trim().toLowerCase();
+    return !search || `${station.code} ${station.nameTh} ${station.nameEn}`.toLowerCase().includes(search);
+  });
   useEffect(() => { const closeOther = (event: Event) => { if ((event as CustomEvent<string>).detail !== id) setOpen(false); }; window.addEventListener('station-select-open', closeOther); return () => window.removeEventListener('station-select-open', closeOther); }, [id]);
-  const toggle = () => { if (!open) window.dispatchEvent(new CustomEvent('station-select-open', { detail: id })); setOpen(current => !current); };
-  return <div className="station-select"><small>{label}</small><button type="button" className="station-select-trigger" onClick={toggle}><span><b>{selected.code}</b> {selected.nameTh}</span><i>⌄</i></button>{open && <div className="station-options">{blueLineStations.map(station => <button type="button" key={station.code} className={station.code === selected.code ? 'selected' : ''} onClick={() => { onChange(station.nameTh); setOpen(false); }}><b>{station.code}</b><span>{station.nameTh}</span></button>)}</div>}</div>;
+  const toggle = (event: MouseEvent<HTMLButtonElement>) => {
+    if (!open) {
+      window.dispatchEvent(new CustomEvent('station-select-open', { detail: id }));
+      const trigger = event.currentTarget;
+      window.requestAnimationFrame(() => {
+        const view = trigger.closest('.subview') as HTMLElement | null;
+        if (!view) return;
+        const viewBounds = view.getBoundingClientRect();
+        const triggerBounds = trigger.getBoundingClientRect();
+        view.scrollTo({ top: Math.max(0, view.scrollTop + triggerBounds.top - viewBounds.top - 18), behavior: 'smooth' });
+      });
+    }
+    setOpen(current => !current);
+    setQuery('');
+  };
+  return <div className="station-select"><small>{label}</small><button type="button" className="station-select-trigger" onClick={toggle}><span><b>{selected.code}</b> {selected.nameTh}</span><i>⌄</i></button>{open && <div className="station-options"><input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="พิมพ์ค้นหาสถานี..." aria-label={`ค้นหา${label}`} autoFocus />{filteredStations.length ? filteredStations.map(station => <button type="button" key={station.code} className={station.code === selected.code ? 'selected' : ''} onClick={() => { onChange(station.nameTh); setOpen(false); setQuery(''); }}><b>{station.code}</b><span>{station.nameTh}<small>{station.nameEn}</small></span></button>) : <p className="station-empty">ไม่พบสถานีที่ค้นหา</p>}</div>}</div>;
 }
 
 function Home({ go, origin, setOrigin, destination, setDestination }: HomeProps) {
@@ -100,7 +157,7 @@ function Home({ go, origin, setOrigin, destination, setDestination }: HomeProps)
   return <>
     <div className="hello"><p>สวัสดีตอนเช้า</p><h1>ไปไหนต่อดี<br/><em>วันนี้?</em></h1></div>
     <article className="balance-card"><div><span>Cash Balance</span><strong>฿124.00</strong></div><button onClick={() => go('wallet')}>ดูรายการ <span>→</span></button><div className="card-orbit" /></article>
-    <div className="home-menu"><button className="home-menu-item" onClick={() => go('booking')}><span><Icon name="plus" /></span><b>จองตั๋ว</b></button><button className="home-menu-item" onClick={() => go('map')}><span><Icon name="map" /></span><b>ดูแผนที่</b></button><button className="home-menu-item" onClick={() => go('machine')}><span><Icon name="scan" /></span><b>ตั๋ว + สแกน</b></button><button className="home-menu-item" onClick={() => go('wallet')}><span><Icon name="wallet" /></span><b>กระเป๋า</b></button></div>
+    <div className="home-menu"><button className="home-menu-item" onClick={() => go('planner')}><span><Icon name="plus" /></span><b>จองตั๋วเลย</b></button><button className="home-menu-item" onClick={() => go('map')}><span><Icon name="map" /></span><b>ดูแผนที่</b></button><button className="home-menu-item" onClick={() => go('booking')}><span><Icon name="scan" /></span><b>ตั๋วของฉัน</b></button><button className="home-menu-item" onClick={() => go('wallet')}><span><Icon name="wallet" /></span><b>กระเป๋า</b></button></div>
     <section className="planner card">
       <div className="section-head"><div><span className="eyebrow">วางแผนการเดินทาง</span><h2>เลือกเส้นทาง</h2></div><span className="line-pill">MRT</span></div>
       <div className="route-fields">
@@ -126,13 +183,13 @@ function RouteTicket({ origin, destination, live = false }: RouteTicketProps) {
 }
 
 function BookingEmpty({ go }: { go: Go }) {
-  return <section className="booking-container card"><div className="booking-page-head"><div><span className="eyebrow">MY TICKETS</span><h1>ตั๋วของฉัน</h1></div><button className="add-ticket" onClick={() => go('planner')} aria-label="จองตั๋วใหม่">+</button></div><div className="empty-booking"><div className="empty-ticket-icon"><Icon name="map" /></div><h2>ไม่พบตั๋ว</h2><p>เริ่มวางแผนการเดินทาง<br/>และจอง Token ใบแรกของคุณ</p><button className="primary" onClick={() => go('planner')}>จองตั๋วใหม่ <span>→</span></button></div></section>;
+  return <section className="booking-container card"><div className="booking-page-head"><div><h1>ตั๋วของฉัน</h1></div><button className="add-ticket" onClick={() => go('planner')} aria-label="จองตั๋วใหม่">+</button></div><div className="empty-booking"><div className="empty-ticket-icon"><Icon name="map" /></div><h2>ไม่พบตั๋ว</h2><p>เริ่มวางแผนการเดินทาง<br/>และจอง Token ใบแรกของคุณ</p><button className="primary" onClick={() => go('planner')}>จองตั๋วใหม่ <span>→</span></button></div></section>;
 }
 
 function BookingPlanner({ go, origin, setOrigin, destination, setDestination }: HomeProps) {
   const swap = () => { const old = origin; setOrigin(destination); setDestination(old); };
   const journey = calculateJourney(origin, destination);
-  return <><button className="back" onClick={() => go('booking')}>← ตั๋วของฉัน</button><span className="eyebrow">วางแผนการเดินทาง</span><h1>จองตั๋ว</h1><BookingMap origin={origin} destination={destination}/><section className="planner card"><div className="section-head"><div><span className="eyebrow">ROUTE PLANNER</span><h2>เลือกเส้นทาง</h2></div><span className="line-pill">MRT</span></div><div className="route-fields"><label><StationSelect id="origin" label="Departure" value={origin} onChange={setOrigin} /></label><button className="swap" onClick={swap} aria-label="สลับสถานี">⇅</button><label><StationSelect id="destination" label="Destination" value={destination} onChange={setDestination} /></label></div><div className="journey-meta"><span><b>{journey.stationCount}</b> สถานี</span><span><b>{Math.max(1, journey.stationCount * 3)}</b> นาที</span><strong>฿{journey.fare}</strong></div><button className="primary full" onClick={() => go('checkout')} disabled={origin === destination}>จอง Token ล่วงหน้า <span>→</span></button></section></>;
+  return <><button className="back" onClick={() => go('booking')} aria-label="กลับหน้าตั๋ว">← ตั๋วของฉัน</button><h1>จองตั๋ว</h1><BookingMap origin={origin} destination={destination}/><section className="planner card"><div className="section-head"><div><span className="eyebrow">ROUTE PLANNER</span><h2>เลือกเส้นทาง</h2></div><span className="line-pill">MRT</span></div><div className="route-fields"><label><StationSelect id="origin" label="Departure" value={origin} onChange={setOrigin} /></label><button className="swap" onClick={swap} aria-label="สลับสถานี">⇅</button><label><StationSelect id="destination" label="Destination" value={destination} onChange={setDestination} /></label></div><div className="journey-meta"><span><b>{journey.stationCount}</b> สถานี</span><span><b>{Math.max(1, journey.stationCount * 3)}</b> นาที</span><strong>฿{journey.fare}</strong></div><button className="primary full" onClick={() => go('checkout')} disabled={origin === destination}>จอง Token ล่วงหน้า <span>→</span></button></section></>;
 }
 
 function BookingMap({ origin, destination }: Route) {
@@ -141,18 +198,18 @@ function BookingMap({ origin, destination }: Route) {
 
 function Checkout({ go, route, pay }: { go: Go; route: Route; pay: () => void }) {
   const fare = route.fare ?? calculateJourney(route.origin, route.destination).fare;
-  return <><button className="back" onClick={() => go('home')}>← กลับ</button><span className="eyebrow">ตรวจสอบรายการ</span><h1>พร้อมออกเดินทาง</h1><BookingMap {...route}/><RouteTicket {...route}/><div className="summary card"><h3>สรุปค่าใช้จ่าย</h3><p><span>ค่าโดยสาร</span><b>฿{fare}.00</b></p><p><span>ค่าบริการ</span><b>฿0.00</b></p><hr/><p className="total"><span>ยอดชำระ</span><b>฿{fare}.00</b></p></div><div className="payment card"><span className="wallet-icon">฿</span><div><b>Cash Balance</b><small>ยอดคงเหลือ ฿124.00</small></div><i>✓</i></div><button className="primary full" onClick={pay}>ยืนยันและชำระ ฿{fare} <span>→</span></button></>;
+  return <><button className="back" onClick={() => go('home')} aria-label="กลับหน้าหลัก">← กลับ</button><h1>พร้อมออกเดินทาง</h1><BookingMap {...route}/><RouteTicket {...route}/><div className="summary card"><h3>สรุปค่าใช้จ่าย</h3><p><span>ค่าโดยสาร</span><b>฿{fare}.00</b></p><p><span>ค่าบริการ</span><b>฿0.00</b></p><hr/><p className="total"><span>ยอดชำระ</span><b>฿{fare}.00</b></p></div><div className="payment card"><span className="wallet-icon">฿</span><div><b>Cash Balance</b><small>ยอดคงเหลือ ฿124.00</small></div><i>✓</i></div><button className="primary full" onClick={pay}>ยืนยันและชำระ ฿{fare} <span>→</span></button></>;
 }
 
 function Tickets({ go, route }: { go: Go; route: Route }) {
-  return <><button className="back" onClick={() => go('home')}>← กลับ</button><span className="eyebrow">ตั๋วของฉัน</span><h1>พร้อมรับ Token</h1><RouteTicket {...route} live/><div className="info-strip"><span>ⓘ</span><p><b>ปลอดภัยกว่า QR แบบเดิม</b><small>QR ที่ตู้มีอายุเพียง 45 วินาที และใช้ได้ครั้งเดียว</small></p></div><button className="primary full" onClick={() => go('machine')}>ไปที่ Express Machine <span>→</span></button></>;
+  return <><button className="back" onClick={() => go('home')} aria-label="กลับหน้าหลัก">← กลับ</button><h1>พร้อมรับ Token</h1><RouteTicket {...route} live/><div className="info-strip"><span>ⓘ</span><p><b>ปลอดภัยกว่า QR แบบเดิม</b><small>QR ที่ตู้มีอายุเพียง 45 วินาที และใช้ได้ครั้งเดียว</small></p></div><button className="primary full" onClick={() => go('machine')}>ไปที่ Express Machine <span>→</span></button></>;
 }
 
 function Machine({ go, route }: { go: Go; route: Route }) {
   const [step, setStep] = useState<Step>('queue');
   useEffect(() => { if (step !== 'scan') return; const id = setTimeout(() => setStep('success'), 1900); return () => clearTimeout(id); }, [step]);
   const finish = () => { if (step === 'queue') setStep('scan'); else if (step === 'success') { setStep('queue'); go('home'); } };
-  return <><button className="back" onClick={() => go('home')}>← หน้าหลัก</button><span className="eyebrow">EXPRESS MACHINE · BL21</span><RouteTicket {...route} live/><h1>{step === 'queue' ? 'รับ Token แบบด่วน' : step === 'scan' ? 'สแกน QR จากหน้าตู้' : 'เดินทางได้เลย'}</h1>
+  return <><button className="back" onClick={() => go('home')} aria-label="กลับหน้าหลัก">← หน้าหลัก</button><RouteTicket {...route} live/><h1>{step === 'queue' ? 'รับ Token แบบด่วน' : step === 'scan' ? 'สแกน QR จากหน้าตู้' : 'เดินทางได้เลย'}</h1>
     {step === 'queue' && <div className="queue-panel"><div className="queue-ring"><span>คิวของคุณ</span><strong>A07</strong></div><div><h3>อีก 2 คิวจะถึงคุณ</h3><p>เวลารอประมาณ 2 นาที</p><div className="queue-progress"><i/></div></div></div>}
     {step === 'scan' && <div className="scan-panel"><div className="scan-frame"><div className="qr"/><i className="scan-line"/></div><p>กำลังตรวจสอบ QR จากตู้...</p></div>}
     {step === 'success' && <div className="success-panel"><div className="token"><i>V</i></div><span className="success-check">✓</span><h2>รับ Token สำเร็จ</h2><p>ตู้ BL21 จ่าย Token แล้ว<br/>ประตูทางเข้าอยู่ทางขวามือ</p></div>}
@@ -161,17 +218,17 @@ function Machine({ go, route }: { go: Go; route: Route }) {
 }
 
 function MapView({ go }: { go: Go }) {
-  return <><button className="back" onClick={() => go('home')}>← หน้าหลัก</button><span className="eyebrow">LIVE NETWORK</span><h1>แผนที่เส้นทาง</h1><article className="map-card"><div className="map-lines"><i className="map-line line-green"/><i className="map-line line-blue"/><b className="map-station station-a">BL21</b><b className="map-station station-b">BL18</b><b className="map-station station-c">BL14</b><span className="map-user">●</span></div><div className="map-caption"><span><i className="legend-dot green"/>สายสีเขียว</span><span><i className="legend-dot blue"/>สายสีน้ำเงิน</span></div></article><button className="primary full" onClick={() => go('machine')}>ดู Token และสแกน <span>→</span></button></>;
+  return <><button className="back" onClick={() => go('home')} aria-label="กลับหน้าหลัก">← หน้าหลัก</button><h1>แผนที่เส้นทาง</h1><article className="map-card"><div className="map-lines"><i className="map-line line-green"/><i className="map-line line-blue"/><b className="map-station station-a">BL21</b><b className="map-station station-b">BL18</b><b className="map-station station-c">BL14</b><span className="map-user">●</span></div><div className="map-caption"><span><i className="legend-dot green"/>สายสีเขียว</span><span><i className="legend-dot blue"/>สายสีน้ำเงิน</span></div></article><button className="primary full" onClick={() => go('machine')}>ดู Token และสแกน <span>→</span></button></>;
 }
 
 function Wallet({ go }: { go: Go }) {
   const items: [string, string, string, string, boolean?][] = [['↙','คืนเงินตั๋วหมดอายุ','STT—09112 · 6 ก.ค.','+฿28',true],['↗','จอง Token · สายสีน้ำเงิน','STT—10293 · วันนี้','−฿28'],['+','เติม Cash Balance','PromptPay · 2 ก.ค.','+฿100',true]];
-  return <><button className="back" onClick={() => go('home')}>← กลับ</button><span className="eyebrow">กระเป๋าของฉัน</span><h1>Cash Balance</h1><article className="wallet-hero"><small>ยอดเงินพร้อมใช้</small><strong>฿124.00</strong><span>อัปเดตเมื่อสักครู่</span></article><div className="quick-head"><h2>รายการล่าสุด</h2><button>ดูทั้งหมด</button></div><div className="transactions">{items.map(([icon,title,meta,amount,credit]) => <div key={title}><i className={credit ? 'credit' : ''}>{icon}</i><p><b>{title}</b><small>{meta}</small></p><strong className={credit ? 'plus' : ''}>{amount}</strong></div>)}</div><button className="secondary full">ยื่นคำขอคืนเงินจริง</button></>;
+  return <><button className="back" onClick={() => go('home')} aria-label="กลับหน้าหลัก">← กลับ</button><h1>Cash Balance</h1><article className="wallet-hero"><small>ยอดเงินพร้อมใช้</small><strong>฿124.00</strong><span>อัปเดตเมื่อสักครู่</span></article><div className="quick-head"><h2>รายการล่าสุด</h2><button>ดูทั้งหมด</button></div><div className="transactions">{items.map(([icon,title,meta,amount,credit]) => <div key={title}><i className={credit ? 'credit' : ''}>{icon}</i><p><b>{title}</b><small>{meta}</small></p><strong className={credit ? 'plus' : ''}>{amount}</strong></div>)}</div><button className="secondary full">ยื่นคำขอคืนเงินจริง</button></>;
 }
 
 function Nav({ view, go }: { view: View; go: Go }) {
-  const tabs: [View, IconName, string][] = [['home','home','หน้าหลัก'],['map','map','Map'],['machine','scan','ตั๋ว + สแกน'],['wallet','wallet','กระเป๋า']];
-  return <nav className="bottom-nav">{tabs.map(([id,icon,label]) => <button key={id} className={`${view === id ? 'nav-active ' : ''}${id === 'machine' ? 'scan-nav' : ''}`} onClick={() => go(id)}><span><Icon name={icon} /></span>{label}</button>)}</nav>;
+  const tabs: [View, IconName, string][] = [['home','home','หน้าหลัก'],['booking','scan','ตั๋วของฉัน'],['wallet','wallet','กระเป๋า']];
+  return <nav className="bottom-nav">{tabs.map(([id,icon,label]) => <button key={id} className={`${view === id ? 'nav-active ' : ''}${id === 'booking' ? 'scan-nav' : ''}`} onClick={() => go(id)}><span><Icon name={icon} /></span>{label}</button>)}</nav>;
 }
 
 function WelcomePage({ onSimulate }: { onSimulate: () => void }) {
@@ -183,6 +240,23 @@ export default function App() {
   return showSimulate ? <SimulateApp onWelcome={() => setShowSimulate(false)}/> : <WelcomePage onSimulate={() => setShowSimulate(true)}/>;
 }
 
+function DebugPanel({ view, route, go, setOrigin, setDestination, showToast, reset }: { view: View; route: Route; go: Go; setOrigin: (value: string) => void; setDestination: (value: string) => void; showToast: () => void; reset: () => void }) {
+  const setRoute = (originIndex: number, destinationIndex: number, nextView: View = 'planner') => {
+    setOrigin(metroStations[originIndex].nameTh);
+    setDestination(metroStations[destinationIndex].nameTh);
+    go(nextView);
+  };
+
+  return <aside className="debug-panel" aria-label="Developer debug controls">
+    <div className="debug-panel-head"><span>DEBUG</span><i>DEV</i></div>
+    <p>View: <b>{view}</b></p>
+    <p className="debug-route">{route.origin} <span>→</span> {route.destination}</p>
+    <div className="debug-group"><small>Navigate</small><div className="debug-grid"><button onClick={() => go('home')}>Home</button><button onClick={() => go('booking')}>Tickets</button><button onClick={() => go('planner')}>Booking</button><button onClick={() => go('checkout')}>Checkout</button><button onClick={() => go('map')}>Map</button><button onClick={() => go('machine')}>Machine</button><button onClick={() => go('wallet')}>Wallet</button></div></div>
+    <div className="debug-group"><small>Test route</small><button className="debug-action" onClick={() => setRoute(20, 21)}>Short route · BL21 → BL22</button><button className="debug-action" onClick={() => setRoute(0, 37)}>Full line · BL01 → BL38</button><button className="debug-action" onClick={() => setRoute(38, 9)}>Purple → Blue · PP01 → BL10</button></div>
+    <div className="debug-group"><small>Actions</small><button className="debug-action" onClick={showToast}>Show payment toast</button><button className="debug-reset" onClick={reset}>Reset simulation</button></div>
+  </aside>;
+}
+
 function SimulateApp({ onWelcome }: { onWelcome: () => void }) {
   const [view, setView] = useState<View>('home');
   const [origin, setOrigin] = useState('สุขุมวิท');
@@ -190,7 +264,9 @@ function SimulateApp({ onWelcome }: { onWelcome: () => void }) {
   const [toast, setToast] = useState(false);
   const go: Go = id => { setView(id); window.scrollTo({ top: 0, behavior: 'smooth' }); };
   const pay = () => { setToast(true); setTimeout(() => setToast(false), 2200); setTimeout(() => go('machine'), 350); };
+  const showDebugToast = () => { setToast(true); setTimeout(() => setToast(false), 2200); };
+  const reset = () => { setOrigin(blueLineStations[21].nameTh); setDestination(blueLineStations[25].nameTh); setToast(false); go('home'); };
   const journey = calculateJourney(origin, destination);
   const route: Route = { origin, destination, stationCount: journey.stationCount, fare: journey.fare };
-  return <><button className="welcome-return" onClick={onWelcome}>← Welcome</button><div className="ambient ambient-a"/><div className="ambient ambient-b"/><main className="shell"><Header go={go}/><section key={view} className={`view active ${view !== 'home' ? 'subview' : ''}`}>{view === 'home' && <Home go={go} origin={origin} setOrigin={setOrigin} destination={destination} setDestination={setDestination}/>} {view === 'checkout' && <Checkout go={go} route={route} pay={pay}/>} {view === 'booking' && <BookingEmpty go={go}/>} {view === 'planner' && <BookingPlanner go={go} origin={origin} setOrigin={setOrigin} destination={destination} setDestination={setDestination}/>} {view === 'map' && <MapView go={go}/>} {view === 'machine' && <Machine go={go} route={route}/>} {view === 'wallet' && <Wallet go={go}/>}</section><Nav view={view} go={go}/></main><div className={`toast ${toast ? 'show' : ''}`}>ชำระเงินสำเร็จ — ตั๋วพร้อมใช้งาน</div></>;
+  return <><button className="welcome-return" onClick={onWelcome}>← Welcome</button><div className="ambient ambient-a"/><div className="ambient ambient-b"/><main className="shell"><Header go={go}/><section key={view} className={`view active ${view !== 'home' ? 'subview' : ''}`}>{view === 'home' && <Home go={go} origin={origin} setOrigin={setOrigin} destination={destination} setDestination={setDestination}/>} {view === 'checkout' && <Checkout go={go} route={route} pay={pay}/>} {view === 'booking' && <BookingEmpty go={go}/>} {view === 'planner' && <BookingPlanner go={go} origin={origin} setOrigin={setOrigin} destination={destination} setDestination={setDestination}/>} {view === 'map' && <MapView go={go}/>} {view === 'machine' && <Machine go={go} route={route}/>} {view === 'wallet' && <Wallet go={go}/>}</section><Nav view={view} go={go}/></main><DebugPanel view={view} route={route} go={go} setOrigin={setOrigin} setDestination={setDestination} showToast={showDebugToast} reset={reset}/><div className={`toast ${toast ? 'show' : ''}`}>ชำระเงินสำเร็จ — ตั๋วพร้อมใช้งาน</div></>;
 }
