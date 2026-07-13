@@ -1,5 +1,5 @@
 // PLEASE READ LICENSE.md. TokenGo is protected software. Do not copy, rename, remove attribution, or submit derivative work without permission.
-import { useEffect, useState, type MouseEvent } from 'react';
+import { useEffect, useRef, useState, type MouseEvent, type PointerEvent as ReactPointerEvent } from 'react';
 import './welcome.css';
 
 type View = 'home' | 'checkout' | 'booking' | 'planner' | 'map' | 'machine' | 'wallet';
@@ -217,8 +217,115 @@ function Machine({ go, route }: { go: Go; route: Route }) {
   </>;
 }
 
-function MapView({ go }: { go: Go }) {
-  return <><button className="back" onClick={() => go('home')} aria-label="กลับหน้าหลัก">← หน้าหลัก</button><h1>แผนที่เส้นทาง</h1><article className="map-card"><div className="map-lines"><i className="map-line line-green"/><i className="map-line line-blue"/><b className="map-station station-a">BL21</b><b className="map-station station-b">BL18</b><b className="map-station station-c">BL14</b><span className="map-user">●</span></div><div className="map-caption"><span><i className="legend-dot green"/>สายสีเขียว</span><span><i className="legend-dot blue"/>สายสีน้ำเงิน</span></div></article><button className="primary full" onClick={() => go('machine')}>ดู Token และสแกน <span>→</span></button></>;
+function MapView({ go, origin, setOrigin, destination, setDestination }: HomeProps) {
+  const [pendingStationCode, setPendingStationCode] = useState<string | null>(null);
+  const [mapZoom, setMapZoom] = useState(1);
+  const mapScrollRef = useRef<HTMLDivElement>(null);
+  const mapZoomRef = useRef(1);
+  const mapDrag = useRef({ active: false, moved: false, x: 0, y: 0, left: 0, top: 0 });
+  const originStation = metroStations.find(station => station.nameTh === origin);
+  const destinationStation = metroStations.find(station => station.nameTh === destination);
+  const pendingStation = metroStations.find(station => station.code === pendingStationCode);
+  const journey = calculateJourney(origin, destination);
+  const routePoints = journey.codes
+    .map(code => officialMapHotspots[code === 'BL10' ? 'PP16' : code])
+    .filter((point): point is { x: number; y: number } => Boolean(point));
+  useEffect(() => {
+    const scroller = mapScrollRef.current;
+    const point = originStation && officialMapHotspots[originStation.code === 'BL10' ? 'PP16' : originStation.code];
+    if (!scroller || !point) return;
+    scroller.scrollLeft = Math.max(0, (point.x / 100) * scroller.scrollWidth - scroller.clientWidth / 2);
+    scroller.scrollTop = Math.max(0, (point.y / 100) * scroller.scrollHeight - scroller.clientHeight / 2);
+  }, [originStation?.code]);
+  useEffect(() => {
+    const scroller = mapScrollRef.current;
+    if (!scroller) return;
+    const zoomWithWheel = (event: WheelEvent) => {
+      event.preventDefault();
+      const stage = scroller.querySelector<HTMLElement>('.sim-map-stage');
+      if (!stage) return;
+      const viewportCenterX = scroller.scrollLeft + scroller.clientWidth / 2;
+      const viewportCenterY = scroller.scrollTop + scroller.clientHeight / 2;
+      const currentZoom = mapZoomRef.current;
+      const nextZoom = Math.min(2.2, Math.max(0.65, currentZoom * Math.exp(-event.deltaY * 0.0015)));
+      if (Math.abs(nextZoom - currentZoom) < 0.001) return;
+      const ratio = nextZoom / currentZoom;
+      mapZoomRef.current = nextZoom;
+      stage.style.width = `${1000 * nextZoom}px`;
+      stage.getBoundingClientRect();
+      scroller.scrollLeft = viewportCenterX * ratio - scroller.clientWidth / 2;
+      scroller.scrollTop = viewportCenterY * ratio - scroller.clientHeight / 2;
+      setMapZoom(nextZoom);
+    };
+    scroller.addEventListener('wheel', zoomWithWheel, { passive: false });
+    return () => scroller.removeEventListener('wheel', zoomWithWheel);
+  }, []);
+  const startMapDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (event.button !== 0) return;
+    const scroller = mapScrollRef.current;
+    if (!scroller) return;
+    mapDrag.current = { active: true, moved: false, x: event.clientX, y: event.clientY, left: scroller.scrollLeft, top: scroller.scrollTop };
+    scroller.setPointerCapture(event.pointerId);
+    scroller.classList.add('dragging');
+  };
+  const moveMapDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const scroller = mapScrollRef.current;
+    if (!scroller || !mapDrag.current.active) return;
+    const deltaX = event.clientX - mapDrag.current.x;
+    const deltaY = event.clientY - mapDrag.current.y;
+    if (Math.abs(deltaX) > 4 || Math.abs(deltaY) > 4) mapDrag.current.moved = true;
+    scroller.scrollLeft = mapDrag.current.left - deltaX;
+    scroller.scrollTop = mapDrag.current.top - deltaY;
+  };
+  const stopMapDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const scroller = mapScrollRef.current;
+    mapDrag.current.active = false;
+    if (scroller?.hasPointerCapture(event.pointerId)) scroller.releasePointerCapture(event.pointerId);
+    scroller?.classList.remove('dragging');
+  };
+  const chooseOrigin = () => {
+    if (!pendingStation) return;
+    setOrigin(pendingStation.nameTh);
+    if (pendingStation.nameTh === destination) {
+      const fallback = metroStations.find(station => station.code !== pendingStation.code);
+      if (fallback) setDestination(fallback.nameTh);
+    }
+    setPendingStationCode(null);
+  };
+  const chooseDestination = () => {
+    if (!pendingStation || pendingStation.nameTh === origin) return;
+    setDestination(pendingStation.nameTh);
+    setPendingStationCode(null);
+  };
+
+  return <>
+    <button className="back" onClick={() => go('home')} aria-label="กลับหน้าหลัก">← หน้าหลัก</button>
+    <div className="sim-map-heading"><div><span className="eyebrow">INTERACTIVE MRT MAP</span><h1>เลือกสถานีบนแผนที่</h1></div><button type="button" onClick={() => { setOrigin(blueLineStations[21].nameTh); setDestination(blueLineStations[25].nameTh); }}>เริ่มใหม่</button></div>
+    <article className="sim-map-card">
+      <div ref={mapScrollRef} className="sim-map-scroll" aria-label="แผนที่รถไฟฟ้า MRT คลิกค้างแล้วลากเพื่อเลื่อน" onPointerDown={startMapDrag} onPointerMove={moveMapDrag} onPointerUp={stopMapDrag} onPointerCancel={stopMapDrag}>
+        <div className="official-map-stage sim-map-stage" style={{ width: `${1000 * mapZoom}px` }}>
+          <img className="official-mrt-map" src="/maps/mrt-network-map.jpg" alt="แผนที่รถไฟฟ้า MRT จาก BEM" width="6287" height="4788" style={{ width: '100%' }} draggable={false}/>
+          {routePoints.length > 1 && <svg className="map-route-link" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><polyline points={routePoints.map(point => `${point.x},${point.y}`).join(' ')}/></svg>}
+          {metroStations.filter(station => station.code !== 'BL10').map(station => {
+            const point = officialMapHotspots[station.code];
+            const isOrigin = station.code === originStation?.code || (station.code === 'PP16' && originStation?.code === 'BL10');
+            const isDestination = station.code === destinationStation?.code || (station.code === 'PP16' && destinationStation?.code === 'BL10');
+            const isTaoPoon = station.code === 'PP16';
+            return point && <button key={station.code} type="button" className={`map-hotspot ${station.code.startsWith('BL') ? 'blue' : 'purple'} ${isOrigin ? 'origin' : ''} ${isDestination ? 'destination' : ''}`} style={{ left: `${point.x}%`, top: `${point.y}%` }} onPointerDown={event => event.stopPropagation()} onClick={() => setPendingStationCode(station.code)} aria-label={`เลือก ${station.nameTh} ${isTaoPoon ? 'BL10 / PP16' : station.code}`}><span><b>{isTaoPoon ? 'BL10 / PP16' : station.code}</b>{station.nameTh}</span></button>;
+          })}
+        </div>
+      </div>
+      <div className="map-legend sim-map-legend"><span><i className="blue"/>สายสีน้ำเงิน</span><span><i className="purple"/>สายสีม่วง</span><b className="zoom-level">{Math.round(mapZoom * 100)}%</b><span className="drag-hint">คลิกค้างเพื่อลาก · Scroll เพื่อซูม</span></div>
+    </article>
+    <section className="sim-map-summary card">
+      <div><small>ต้นทาง</small><b>{originStation?.nameTh} <em>{originStation?.code}</em></b></div>
+      <span>→</span>
+      <div><small>ปลายทาง</small><b>{destinationStation?.nameTh} <em>{destinationStation?.code}</em></b></div>
+      <p><span>{journey.stationCount} สถานี · ประมาณ {Math.max(1, journey.stationCount * 3)} นาที</span><strong>฿{journey.fare}</strong></p>
+    </section>
+    <button className="primary full" onClick={() => go('planner')} disabled={origin === destination}>ใช้เส้นทางนี้ <span>→</span></button>
+    {pendingStation && <div className="sim-station-action-modal" role="dialog" aria-modal="true" aria-label="เลือกการใช้งานสถานี" onClick={() => setPendingStationCode(null)}><section onClick={event => event.stopPropagation()}><span>เลือกสถานี</span><h2>{pendingStation.nameTh}</h2><p>{pendingStation.code === 'PP16' ? 'BL10 / PP16' : pendingStation.code}</p><div><button type="button" className="primary" onClick={chooseOrigin}>เลือกเป็นต้นทาง</button><button type="button" className="secondary" onClick={chooseDestination} disabled={pendingStation.nameTh === origin}>เลือกเป็นปลายทาง</button></div><button type="button" className="modal-back" onClick={() => setPendingStationCode(null)}>ยกเลิก</button></section></div>}
+  </>;
 }
 
 function Wallet({ go }: { go: Go }) {
@@ -327,5 +434,5 @@ function SimulateApp({ onWelcome }: { onWelcome: () => void }) {
   const reset = () => { setOrigin(blueLineStations[21].nameTh); setDestination(blueLineStations[25].nameTh); setToast(false); go('home'); };
   const journey = calculateJourney(origin, destination);
   const route: Route = { origin, destination, stationCount: journey.stationCount, fare: journey.fare };
-  return <><button className="welcome-return" onClick={onWelcome}>← Welcome</button><div className="ambient ambient-a"/><div className="ambient ambient-b"/><main className="shell"><Header go={go}/><section key={view} className={`view active ${view !== 'home' ? 'subview' : ''}`}>{view === 'home' && <Home go={go} origin={origin} setOrigin={setOrigin} destination={destination} setDestination={setDestination}/>} {view === 'checkout' && <Checkout go={go} route={route} pay={pay}/>} {view === 'booking' && <BookingEmpty go={go}/>} {view === 'planner' && <BookingPlanner go={go} origin={origin} setOrigin={setOrigin} destination={destination} setDestination={setDestination}/>} {view === 'map' && <MapView go={go}/>} {view === 'machine' && <Machine go={go} route={route}/>} {view === 'wallet' && <Wallet go={go}/>}</section><Nav view={view} go={go}/></main><DebugPanel view={view} route={route} go={go} setOrigin={setOrigin} setDestination={setDestination} showToast={showDebugToast} reset={reset}/><div className={`toast ${toast ? 'show' : ''}`}>ชำระเงินสำเร็จ — ตั๋วพร้อมใช้งาน</div></>;
+  return <><button className="welcome-return" onClick={onWelcome}>← Welcome</button><div className="ambient ambient-a"/><div className="ambient ambient-b"/><main className="shell"><Header go={go}/><section key={view} className={`view active ${view !== 'home' ? 'subview' : ''}`}>{view === 'home' && <Home go={go} origin={origin} setOrigin={setOrigin} destination={destination} setDestination={setDestination}/>} {view === 'checkout' && <Checkout go={go} route={route} pay={pay}/>} {view === 'booking' && <BookingEmpty go={go}/>} {view === 'planner' && <BookingPlanner go={go} origin={origin} setOrigin={setOrigin} destination={destination} setDestination={setDestination}/>} {view === 'map' && <MapView go={go} origin={origin} setOrigin={setOrigin} destination={destination} setDestination={setDestination}/>} {view === 'machine' && <Machine go={go} route={route}/>} {view === 'wallet' && <Wallet go={go}/>}</section><Nav view={view} go={go}/></main><DebugPanel view={view} route={route} go={go} setOrigin={setOrigin} setDestination={setDestination} showToast={showDebugToast} reset={reset}/><div className={`toast ${toast ? 'show' : ''}`}>ชำระเงินสำเร็จ — ตั๋วพร้อมใช้งาน</div></>;
 }
