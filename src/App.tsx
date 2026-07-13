@@ -127,7 +127,7 @@ type HomeProps = {
 function StationSelect({ id, label, value, onChange }: { id: string; label: string; value: string; onChange: (value: string) => void }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
-  const selected = metroStations.find(station => station.nameTh === value) ?? metroStations[0];
+  const selected = metroStations.find(station => station.nameTh === value);
   const filteredStations = metroStations.filter(station => {
     const search = query.trim().toLowerCase();
     return !search || `${station.code} ${station.nameTh} ${station.nameEn}`.toLowerCase().includes(search);
@@ -148,7 +148,7 @@ function StationSelect({ id, label, value, onChange }: { id: string; label: stri
     setOpen(current => !current);
     setQuery('');
   };
-  return <div className="station-select"><small>{label}</small><button type="button" className="station-select-trigger" onClick={toggle}><span><b>{selected.code}</b> {selected.nameTh}</span><i>⌄</i></button>{open && <div className="station-options"><input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="พิมพ์ค้นหาสถานี..." aria-label={`ค้นหา${label}`} autoFocus />{filteredStations.length ? filteredStations.map(station => <button type="button" key={station.code} className={station.code === selected.code ? 'selected' : ''} onClick={() => { onChange(station.nameTh); setOpen(false); setQuery(''); }}><b>{station.code}</b><span>{station.nameTh}<small>{station.nameEn}</small></span></button>) : <p className="station-empty">ไม่พบสถานีที่ค้นหา</p>}</div>}</div>;
+  return <div className="station-select"><small>{label}</small><button type="button" className="station-select-trigger" onClick={toggle}><span>{selected ? <><b>{selected.code}</b> {selected.nameTh}</> : <em>เลือกสถานี</em>}</span><i>⌄</i></button>{open && <div className="station-options"><input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="พิมพ์ค้นหาสถานี..." aria-label={`ค้นหา${label}`} autoFocus />{filteredStations.length ? filteredStations.map(station => <button type="button" key={station.code} className={station.code === selected?.code ? 'selected' : ''} onClick={() => { onChange(station.nameTh); setOpen(false); setQuery(''); }}><b>{station.code}</b><span>{station.nameTh}<small>{station.nameEn}</small></span></button>) : <p className="station-empty">ไม่พบสถานีที่ค้นหา</p>}</div>}</div>;
 }
 
 function Home({ go, origin, setOrigin, destination, setDestination }: HomeProps) {
@@ -165,8 +165,8 @@ function Home({ go, origin, setOrigin, destination, setDestination }: HomeProps)
         <button className="swap" onClick={swap} aria-label="สลับสถานี">⇅</button>
         <label><StationSelect id="destination" label="Destination" value={destination} onChange={setDestination} /></label>
       </div>
-      <div className="journey-meta"><span><b>{journey.stationCount}</b> สถานี</span><span><b>{Math.max(1, journey.stationCount * 3)}</b> นาที</span><strong>฿{journey.fare}</strong></div>
-      <button className="primary full" onClick={() => go('checkout')} disabled={origin === destination}>จอง Token ล่วงหน้า <span>→</span></button>
+      <div className="journey-meta"><span><b>{journey.stationCount}</b> สถานี</span><span><b>{journey.stationCount * 3}</b> นาที</span><strong>฿{journey.fare}</strong></div>
+      <button className="primary full" onClick={() => go('checkout')} disabled={!origin || !destination || origin === destination}>จอง Token ล่วงหน้า <span>→</span></button>
     </section>
   </>;
 }
@@ -189,11 +189,164 @@ function BookingEmpty({ go }: { go: Go }) {
 function BookingPlanner({ go, origin, setOrigin, destination, setDestination }: HomeProps) {
   const swap = () => { const old = origin; setOrigin(destination); setDestination(old); };
   const journey = calculateJourney(origin, destination);
-  return <><button className="back" onClick={() => go('booking')} aria-label="กลับหน้าตั๋ว">← ตั๋วของฉัน</button><h1>จองตั๋ว</h1><BookingMap origin={origin} destination={destination}/><section className="planner card"><div className="section-head"><div><span className="eyebrow">ROUTE PLANNER</span><h2>เลือกเส้นทาง</h2></div><span className="line-pill">MRT</span></div><div className="route-fields"><label><StationSelect id="origin" label="Departure" value={origin} onChange={setOrigin} /></label><button className="swap" onClick={swap} aria-label="สลับสถานี">⇅</button><label><StationSelect id="destination" label="Destination" value={destination} onChange={setDestination} /></label></div><div className="journey-meta"><span><b>{journey.stationCount}</b> สถานี</span><span><b>{Math.max(1, journey.stationCount * 3)}</b> นาที</span><strong>฿{journey.fare}</strong></div><button className="primary full" onClick={() => go('checkout')} disabled={origin === destination}>จอง Token ล่วงหน้า <span>→</span></button></section></>;
+  return <><button className="back" onClick={() => go('booking')} aria-label="กลับหน้าตั๋ว">← ตั๋วของฉัน</button><h1>จองตั๋ว</h1><BookingInteractiveMap origin={origin} setOrigin={setOrigin} destination={destination} setDestination={setDestination}/><section className="planner card"><div className="section-head"><div><span className="eyebrow">ROUTE PLANNER</span><h2>เลือกเส้นทาง</h2></div><span className="line-pill">MRT</span></div><div className="route-fields"><label><StationSelect id="origin" label="Departure" value={origin} onChange={setOrigin} /></label><button className="swap" onClick={swap} aria-label="สลับสถานี">⇅</button><label><StationSelect id="destination" label="Destination" value={destination} onChange={setDestination} /></label></div><div className="journey-meta"><span><b>{journey.stationCount}</b> สถานี</span><span><b>{journey.stationCount * 3}</b> นาที</span><strong>฿{journey.fare}</strong></div><button className="primary full" onClick={() => go('checkout')} disabled={!origin || !destination || origin === destination}>จอง Token ล่วงหน้า <span>→</span></button></section></>;
 }
 
 function BookingMap({ origin, destination }: Route) {
   return <article className="booking-map"><div className="booking-map-head"><span>ROUTE MAP</span><b>BLUE LINE</b></div><div className="booking-map-body"><i className="booking-route-line"/><div className="booking-point departure"><small>Departure</small><strong>{origin}</strong></div><div className="booking-point destination"><small>Destination</small><strong>{destination}</strong></div></div></article>;
+}
+
+function BookingInteractiveMap({ origin, setOrigin, destination, setDestination }: Pick<HomeProps, 'origin' | 'setOrigin' | 'destination' | 'setDestination'>) {
+  const [pendingStationCode, setPendingStationCode] = useState<string | null>(null);
+  const [cameraScale, setCameraScale] = useState(1);
+  const canvasRef = useRef<HTMLDivElement>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
+  const animationRef = useRef<number | null>(null);
+  const cameraRef = useRef({ scale: 1, x: 0, y: 0 });
+  const previousRouteRef = useRef({ origin, destination });
+  const hasFocusedStationRef = useRef(false);
+  const dragRef = useRef({ active: false, moved: false, x: 0, y: 0, cameraX: 0, cameraY: 0 });
+  const journey = calculateJourney(origin, destination);
+  const originStation = metroStations.find(station => station.nameTh === origin);
+  const destinationStation = metroStations.find(station => station.nameTh === destination);
+  const pendingStation = metroStations.find(station => station.code === pendingStationCode);
+  const routePoints = journey.codes
+    .map(code => officialMapHotspots[code === 'BL10' ? 'PP16' : code])
+    .filter((point): point is { x: number; y: number } => Boolean(point));
+  const originPoint = originStation && officialMapHotspots[originStation.code === 'BL10' ? 'PP16' : originStation.code];
+  const destinationPoint = destinationStation && officialMapHotspots[destinationStation.code === 'BL10' ? 'PP16' : destinationStation.code];
+  useEffect(() => {
+    const previousRoute = previousRouteRef.current;
+    const focusPoint = origin !== previousRoute.origin ? originPoint : destination !== previousRoute.destination ? destinationPoint : null;
+    previousRouteRef.current = { origin, destination };
+    const canvas = canvasRef.current;
+    const stage = stageRef.current;
+    if (!canvas || !stage || !focusPoint) return;
+    if (animationRef.current !== null) cancelAnimationFrame(animationRef.current);
+    const startCamera = { ...cameraRef.current };
+    const targetScale = hasFocusedStationRef.current ? startCamera.scale : Math.max(2.5, startCamera.scale);
+    const targetX = canvas.clientWidth / 2 - (focusPoint.x / 100) * canvas.clientWidth * targetScale;
+    const targetY = canvas.clientHeight / 2 - (focusPoint.y / 100) * canvas.clientHeight * targetScale;
+    const startedAt = performance.now();
+    const duration = 650;
+    hasFocusedStationRef.current = true;
+    const animateCamera = (now: number) => {
+      const progress = Math.min(1, (now - startedAt) / duration);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      const scale = startCamera.scale + (targetScale - startCamera.scale) * eased;
+      const x = startCamera.x + (targetX - startCamera.x) * eased;
+      const y = startCamera.y + (targetY - startCamera.y) * eased;
+      cameraRef.current = { scale, x, y };
+      stage.style.width = `${scale * 100}%`;
+      stage.style.left = `${progress === 1 ? Math.round(x) : x}px`;
+      stage.style.top = `${progress === 1 ? Math.round(y) : y}px`;
+      if (progress < 1) animationRef.current = requestAnimationFrame(animateCamera);
+      else { animationRef.current = null; setCameraScale(targetScale); }
+    };
+    animationRef.current = requestAnimationFrame(animateCamera);
+    return () => {
+      if (animationRef.current !== null) cancelAnimationFrame(animationRef.current);
+      animationRef.current = null;
+    };
+  }, [origin, destination, originPoint, destinationPoint]);
+  useEffect(() => () => {
+    if (animationRef.current !== null) cancelAnimationFrame(animationRef.current);
+  }, []);
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const stage = stageRef.current;
+    if (!canvas || !stage) return;
+    const zoomMap = (event: WheelEvent) => {
+      event.preventDefault();
+      if (animationRef.current !== null) cancelAnimationFrame(animationRef.current);
+      animationRef.current = null;
+      const current = cameraRef.current;
+      const nextScale = Math.min(3.5, Math.max(.8, current.scale * Math.exp(-event.deltaY * .0015)));
+      const bounds = canvas.getBoundingClientRect();
+      const pointerX = event.clientX - bounds.left;
+      const pointerY = event.clientY - bounds.top;
+      const mapX = (pointerX - current.x) / current.scale;
+      const mapY = (pointerY - current.y) / current.scale;
+      const x = pointerX - mapX * nextScale;
+      const y = pointerY - mapY * nextScale;
+      cameraRef.current = { scale: nextScale, x, y };
+      stage.style.width = `${nextScale * 100}%`;
+      stage.style.left = `${x}px`;
+      stage.style.top = `${y}px`;
+      setCameraScale(nextScale);
+    };
+    canvas.addEventListener('wheel', zoomMap, { passive: false });
+    return () => canvas.removeEventListener('wheel', zoomMap);
+  }, []);
+  const startDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (event.button !== 0 || (event.target as HTMLElement).closest('.map-hotspot')) return;
+    if (animationRef.current !== null) cancelAnimationFrame(animationRef.current);
+    animationRef.current = null;
+    const camera = cameraRef.current;
+    dragRef.current = { active: true, moved: false, x: event.clientX, y: event.clientY, cameraX: camera.x, cameraY: camera.y };
+    event.currentTarget.setPointerCapture(event.pointerId);
+    event.currentTarget.classList.add('dragging');
+  };
+  const moveDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!dragRef.current.active || !stageRef.current) return;
+    const deltaX = event.clientX - dragRef.current.x;
+    const deltaY = event.clientY - dragRef.current.y;
+    if (Math.abs(deltaX) > 3 || Math.abs(deltaY) > 3) dragRef.current.moved = true;
+    const x = dragRef.current.cameraX + deltaX;
+    const y = dragRef.current.cameraY + deltaY;
+    cameraRef.current = { ...cameraRef.current, x, y };
+    stageRef.current.style.left = `${x}px`;
+    stageRef.current.style.top = `${y}px`;
+  };
+  const stopDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
+    dragRef.current.active = false;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+    event.currentTarget.classList.remove('dragging');
+  };
+  const chooseOrigin = () => {
+    if (!pendingStation || pendingStation.nameTh === destination) return;
+    setOrigin(pendingStation.nameTh);
+    setPendingStationCode(null);
+  };
+  const chooseDestination = () => {
+    if (!pendingStation || pendingStation.nameTh === origin) return;
+    setDestination(pendingStation.nameTh);
+    setPendingStationCode(null);
+  };
+  const resetMapRoute = () => {
+    if (animationRef.current !== null) cancelAnimationFrame(animationRef.current);
+    animationRef.current = null;
+    setOrigin('');
+    setDestination('');
+    setPendingStationCode(null);
+    previousRouteRef.current = { origin: '', destination: '' };
+    hasFocusedStationRef.current = false;
+    cameraRef.current = { scale: 1, x: 0, y: 0 };
+    setCameraScale(1);
+    if (stageRef.current) {
+      stageRef.current.style.width = '100%';
+      stageRef.current.style.left = '0';
+      stageRef.current.style.top = '0';
+    }
+  };
+  return <article className="booking-map booking-interactive-preview">
+    <div className="booking-map-head"><span>INTERACTIVE ROUTE MAP</span><div><b>{Math.round(cameraScale * 100)}%</b><button type="button" onClick={resetMapRoute}>เริ่มใหม่</button></div></div>
+    <div ref={canvasRef} className="booking-interactive-canvas" aria-label="แผนที่เลือกต้นทางและปลายทาง" onPointerDown={startDrag} onPointerMove={moveDrag} onPointerUp={stopDrag} onPointerCancel={stopDrag}>
+      <div ref={stageRef} className="official-map-stage booking-interactive-stage">
+        <img className="official-mrt-map" src="/maps/mrt-network-map.jpg" alt="แผนที่รถไฟฟ้า MRT จาก BEM" width="6287" height="4788" draggable={false}/>
+        {routePoints.length > 1 && <svg className="booking-route-link" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><polyline points={routePoints.map(point => `${point.x},${point.y}`).join(' ')}/></svg>}
+        {metroStations.filter(station => station.code !== 'BL10').map(station => {
+          const point = officialMapHotspots[station.code];
+          const isOrigin = station.code === originStation?.code || (station.code === 'PP16' && originStation?.code === 'BL10');
+          const isDestination = station.code === destinationStation?.code || (station.code === 'PP16' && destinationStation?.code === 'BL10');
+          const isTaoPoon = station.code === 'PP16';
+          return point && <button key={station.code} type="button" className={`map-hotspot ${station.code.startsWith('BL') ? 'blue' : 'purple'} ${isOrigin ? 'origin' : ''} ${isDestination ? 'destination' : ''}`} style={{ left: `${point.x}%`, top: `${point.y}%` }} onPointerDown={event => event.stopPropagation()} onClick={() => setPendingStationCode(station.code)} aria-label={`เลือก ${station.nameTh} ${isTaoPoon ? 'BL10 / PP16' : station.code}`}><span><b>{isTaoPoon ? 'BL10 / PP16' : station.code}</b>{station.nameTh}</span></button>;
+        })}
+      </div>
+    </div>
+    <div className="booking-map-help">ลากเพื่อเลื่อน · Scroll เพื่อซูม · กดหมุดเพื่อเลือกสถานี</div>
+    {pendingStation && <div className="sim-station-action-modal" role="dialog" aria-modal="true" aria-label="เลือกการใช้งานสถานี" onClick={() => setPendingStationCode(null)}><section onClick={event => event.stopPropagation()}><span>เลือกสถานี</span><h2>{pendingStation.nameTh}</h2><p>{pendingStation.code === 'PP16' ? 'BL10 / PP16' : pendingStation.code}</p><div><button type="button" className="primary" onClick={chooseOrigin} disabled={pendingStation.nameTh === destination}>เลือกเป็นต้นทาง</button><button type="button" className="secondary" onClick={chooseDestination} disabled={pendingStation.nameTh === origin}>เลือกเป็นปลายทาง</button></div><button type="button" className="modal-back" onClick={() => setPendingStationCode(null)}>ยกเลิก</button></section></div>}
+  </article>;
 }
 
 function Checkout({ go, route, pay }: { go: Go; route: Route; pay: () => void }) {
@@ -217,8 +370,10 @@ function Machine({ go, route }: { go: Go; route: Route }) {
   </>;
 }
 
-function MapView({ go, origin, setOrigin, destination, setDestination }: HomeProps) {
+function MapView({ go, backView, origin, setOrigin, destination, setDestination }: HomeProps & { backView: View }) {
   const [pendingStationCode, setPendingStationCode] = useState<string | null>(null);
+  const [hasSelectedOrigin, setHasSelectedOrigin] = useState(false);
+  const [hasSelectedDestination, setHasSelectedDestination] = useState(false);
   const [mapZoom, setMapZoom] = useState(1);
   const mapScrollRef = useRef<HTMLDivElement>(null);
   const mapZoomRef = useRef(1);
@@ -227,16 +382,16 @@ function MapView({ go, origin, setOrigin, destination, setDestination }: HomePro
   const destinationStation = metroStations.find(station => station.nameTh === destination);
   const pendingStation = metroStations.find(station => station.code === pendingStationCode);
   const journey = calculateJourney(origin, destination);
-  const routePoints = journey.codes
+  const routePoints = (hasSelectedOrigin && hasSelectedDestination ? journey.codes : [])
     .map(code => officialMapHotspots[code === 'BL10' ? 'PP16' : code])
     .filter((point): point is { x: number; y: number } => Boolean(point));
   useEffect(() => {
     const scroller = mapScrollRef.current;
     const point = originStation && officialMapHotspots[originStation.code === 'BL10' ? 'PP16' : originStation.code];
-    if (!scroller || !point) return;
+    if (!hasSelectedOrigin || !scroller || !point) return;
     scroller.scrollLeft = Math.max(0, (point.x / 100) * scroller.scrollWidth - scroller.clientWidth / 2);
     scroller.scrollTop = Math.max(0, (point.y / 100) * scroller.scrollHeight - scroller.clientHeight / 2);
-  }, [originStation?.code]);
+  }, [hasSelectedOrigin, originStation?.code]);
   useEffect(() => {
     const scroller = mapScrollRef.current;
     if (!scroller) return;
@@ -284,23 +439,26 @@ function MapView({ go, origin, setOrigin, destination, setDestination }: HomePro
     scroller?.classList.remove('dragging');
   };
   const chooseOrigin = () => {
-    if (!pendingStation) return;
+    if (!pendingStation || (hasSelectedDestination && pendingStation.nameTh === destination)) return;
     setOrigin(pendingStation.nameTh);
-    if (pendingStation.nameTh === destination) {
-      const fallback = metroStations.find(station => station.code !== pendingStation.code);
-      if (fallback) setDestination(fallback.nameTh);
-    }
+    setHasSelectedOrigin(true);
     setPendingStationCode(null);
   };
   const chooseDestination = () => {
-    if (!pendingStation || pendingStation.nameTh === origin) return;
+    if (!pendingStation || (hasSelectedOrigin && pendingStation.nameTh === origin)) return;
     setDestination(pendingStation.nameTh);
+    setHasSelectedDestination(true);
+    setPendingStationCode(null);
+  };
+  const resetRoute = () => {
+    setHasSelectedOrigin(false);
+    setHasSelectedDestination(false);
     setPendingStationCode(null);
   };
 
   return <>
-    <button className="back" onClick={() => go('home')} aria-label="กลับหน้าหลัก">← หน้าหลัก</button>
-    <div className="sim-map-heading"><div><span className="eyebrow">INTERACTIVE MRT MAP</span><h1>เลือกสถานีบนแผนที่</h1></div><button type="button" onClick={() => { setOrigin(blueLineStations[21].nameTh); setDestination(blueLineStations[25].nameTh); }}>เริ่มใหม่</button></div>
+    <button className="back" onClick={() => go(backView)} aria-label="กลับหน้าก่อนหน้า">← {backView === 'planner' ? 'หน้าจองตั๋ว' : 'หน้าหลัก'}</button>
+    <div className="sim-map-heading"><div><span className="eyebrow">INTERACTIVE MRT MAP</span><h1>เลือกสถานีบนแผนที่</h1></div><button type="button" onClick={resetRoute}>เริ่มใหม่</button></div>
     <article className="sim-map-card">
       <div ref={mapScrollRef} className="sim-map-scroll" aria-label="แผนที่รถไฟฟ้า MRT คลิกค้างแล้วลากเพื่อเลื่อน" onPointerDown={startMapDrag} onPointerMove={moveMapDrag} onPointerUp={stopMapDrag} onPointerCancel={stopMapDrag}>
         <div className="official-map-stage sim-map-stage" style={{ width: `${1000 * mapZoom}px` }}>
@@ -308,8 +466,8 @@ function MapView({ go, origin, setOrigin, destination, setDestination }: HomePro
           {routePoints.length > 1 && <svg className="map-route-link" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><polyline points={routePoints.map(point => `${point.x},${point.y}`).join(' ')}/></svg>}
           {metroStations.filter(station => station.code !== 'BL10').map(station => {
             const point = officialMapHotspots[station.code];
-            const isOrigin = station.code === originStation?.code || (station.code === 'PP16' && originStation?.code === 'BL10');
-            const isDestination = station.code === destinationStation?.code || (station.code === 'PP16' && destinationStation?.code === 'BL10');
+            const isOrigin = hasSelectedOrigin && (station.code === originStation?.code || (station.code === 'PP16' && originStation?.code === 'BL10'));
+            const isDestination = hasSelectedDestination && (station.code === destinationStation?.code || (station.code === 'PP16' && destinationStation?.code === 'BL10'));
             const isTaoPoon = station.code === 'PP16';
             return point && <button key={station.code} type="button" className={`map-hotspot ${station.code.startsWith('BL') ? 'blue' : 'purple'} ${isOrigin ? 'origin' : ''} ${isDestination ? 'destination' : ''}`} style={{ left: `${point.x}%`, top: `${point.y}%` }} onPointerDown={event => event.stopPropagation()} onClick={() => setPendingStationCode(station.code)} aria-label={`เลือก ${station.nameTh} ${isTaoPoon ? 'BL10 / PP16' : station.code}`}><span><b>{isTaoPoon ? 'BL10 / PP16' : station.code}</b>{station.nameTh}</span></button>;
           })}
@@ -318,13 +476,13 @@ function MapView({ go, origin, setOrigin, destination, setDestination }: HomePro
       <div className="map-legend sim-map-legend"><span><i className="blue"/>สายสีน้ำเงิน</span><span><i className="purple"/>สายสีม่วง</span><b className="zoom-level">{Math.round(mapZoom * 100)}%</b><span className="drag-hint">คลิกค้างเพื่อลาก · Scroll เพื่อซูม</span></div>
     </article>
     <section className="sim-map-summary card">
-      <div><small>ต้นทาง</small><b>{originStation?.nameTh} <em>{originStation?.code}</em></b></div>
+      <div><small>ต้นทาง</small><b>{hasSelectedOrigin && originStation ? <>{originStation.nameTh} <em>{originStation.code}</em></> : 'ยังไม่ได้เลือก'}</b></div>
       <span>→</span>
-      <div><small>ปลายทาง</small><b>{destinationStation?.nameTh} <em>{destinationStation?.code}</em></b></div>
-      <p><span>{journey.stationCount} สถานี · ประมาณ {Math.max(1, journey.stationCount * 3)} นาที</span><strong>฿{journey.fare}</strong></p>
+      <div><small>ปลายทาง</small><b>{hasSelectedDestination && destinationStation ? <>{destinationStation.nameTh} <em>{destinationStation.code}</em></> : 'ยังไม่ได้เลือก'}</b></div>
+      <p>{hasSelectedOrigin && hasSelectedDestination ? <><span>{journey.stationCount} สถานี · ประมาณ {Math.max(1, journey.stationCount * 3)} นาที</span><strong>฿{journey.fare}</strong></> : <span>เลือกต้นทางและปลายทางเพื่อดูเส้นทาง</span>}</p>
     </section>
-    <button className="primary full" onClick={() => go('planner')} disabled={origin === destination}>ใช้เส้นทางนี้ <span>→</span></button>
-    {pendingStation && <div className="sim-station-action-modal" role="dialog" aria-modal="true" aria-label="เลือกการใช้งานสถานี" onClick={() => setPendingStationCode(null)}><section onClick={event => event.stopPropagation()}><span>เลือกสถานี</span><h2>{pendingStation.nameTh}</h2><p>{pendingStation.code === 'PP16' ? 'BL10 / PP16' : pendingStation.code}</p><div><button type="button" className="primary" onClick={chooseOrigin}>เลือกเป็นต้นทาง</button><button type="button" className="secondary" onClick={chooseDestination} disabled={pendingStation.nameTh === origin}>เลือกเป็นปลายทาง</button></div><button type="button" className="modal-back" onClick={() => setPendingStationCode(null)}>ยกเลิก</button></section></div>}
+    <button className="primary full" onClick={() => go('planner')} disabled={!hasSelectedOrigin || !hasSelectedDestination || origin === destination}>ใช้เส้นทางนี้เพื่อจองตั๋ว <span>→</span></button>
+    {pendingStation && <div className="sim-station-action-modal" role="dialog" aria-modal="true" aria-label="เลือกการใช้งานสถานี" onClick={() => setPendingStationCode(null)}><section onClick={event => event.stopPropagation()}><span>เลือกสถานี</span><h2>{pendingStation.nameTh}</h2><p>{pendingStation.code === 'PP16' ? 'BL10 / PP16' : pendingStation.code}</p><div><button type="button" className="primary" onClick={chooseOrigin} disabled={hasSelectedDestination && pendingStation.nameTh === destination}>เลือกเป็นต้นทาง</button><button type="button" className="secondary" onClick={chooseDestination} disabled={hasSelectedOrigin && pendingStation.nameTh === origin}>เลือกเป็นปลายทาง</button></div><button type="button" className="modal-back" onClick={() => setPendingStationCode(null)}>ยกเลิก</button></section></div>}
   </>;
 }
 
@@ -425,14 +583,15 @@ function DebugPanel({ view, route, go, setOrigin, setDestination, showToast, res
 
 function SimulateApp({ onWelcome }: { onWelcome: () => void }) {
   const [view, setView] = useState<View>('home');
-  const [origin, setOrigin] = useState('สุขุมวิท');
-  const [destination, setDestination] = useState('สีลม');
+  const [mapReturnView, setMapReturnView] = useState<View>('home');
+  const [origin, setOrigin] = useState('');
+  const [destination, setDestination] = useState('');
   const [toast, setToast] = useState(false);
-  const go: Go = id => { setView(id); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+  const go: Go = id => { if (id === 'map' && view !== 'map') setMapReturnView(view); if (id === 'planner' && view !== 'map') { setOrigin(''); setDestination(''); } setView(id); window.scrollTo({ top: 0, behavior: 'smooth' }); };
   const pay = () => { setToast(true); setTimeout(() => setToast(false), 2200); setTimeout(() => go('machine'), 350); };
   const showDebugToast = () => { setToast(true); setTimeout(() => setToast(false), 2200); };
-  const reset = () => { setOrigin(blueLineStations[21].nameTh); setDestination(blueLineStations[25].nameTh); setToast(false); go('home'); };
+  const reset = () => { setOrigin(''); setDestination(''); setToast(false); go('home'); };
   const journey = calculateJourney(origin, destination);
   const route: Route = { origin, destination, stationCount: journey.stationCount, fare: journey.fare };
-  return <><button className="welcome-return" onClick={onWelcome}>← Welcome</button><div className="ambient ambient-a"/><div className="ambient ambient-b"/><main className="shell"><Header go={go}/><section key={view} className={`view active ${view !== 'home' ? 'subview' : ''}`}>{view === 'home' && <Home go={go} origin={origin} setOrigin={setOrigin} destination={destination} setDestination={setDestination}/>} {view === 'checkout' && <Checkout go={go} route={route} pay={pay}/>} {view === 'booking' && <BookingEmpty go={go}/>} {view === 'planner' && <BookingPlanner go={go} origin={origin} setOrigin={setOrigin} destination={destination} setDestination={setDestination}/>} {view === 'map' && <MapView go={go} origin={origin} setOrigin={setOrigin} destination={destination} setDestination={setDestination}/>} {view === 'machine' && <Machine go={go} route={route}/>} {view === 'wallet' && <Wallet go={go}/>}</section><Nav view={view} go={go}/></main><DebugPanel view={view} route={route} go={go} setOrigin={setOrigin} setDestination={setDestination} showToast={showDebugToast} reset={reset}/><div className={`toast ${toast ? 'show' : ''}`}>ชำระเงินสำเร็จ — ตั๋วพร้อมใช้งาน</div></>;
+  return <><button className="welcome-return" onClick={onWelcome}>← Welcome</button><div className="ambient ambient-a"/><div className="ambient ambient-b"/><main className={`shell ${view === 'home' ? 'home-shell' : ''}`}><Header go={go}/><section key={view} className={`view active ${view !== 'home' ? 'subview' : ''}`}>{view === 'home' && <Home go={go} origin={origin} setOrigin={setOrigin} destination={destination} setDestination={setDestination}/>} {view === 'checkout' && <Checkout go={go} route={route} pay={pay}/>} {view === 'booking' && <BookingEmpty go={go}/>} {view === 'planner' && <BookingPlanner go={go} origin={origin} setOrigin={setOrigin} destination={destination} setDestination={setDestination}/>} {view === 'map' && <MapView go={go} backView={mapReturnView} origin={origin} setOrigin={setOrigin} destination={destination} setDestination={setDestination}/>} {view === 'machine' && <Machine go={go} route={route}/>} {view === 'wallet' && <Wallet go={go}/>}</section><Nav view={view} go={go}/></main><DebugPanel view={view} route={route} go={go} setOrigin={setOrigin} setDestination={setDestination} showToast={showDebugToast} reset={reset}/><div className={`toast ${toast ? 'show' : ''}`}>ชำระเงินสำเร็จ — ตั๋วพร้อมใช้งาน</div></>;
 }
