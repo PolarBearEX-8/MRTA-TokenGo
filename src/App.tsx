@@ -4,6 +4,7 @@ import './welcome.css';
 
 type View = 'home' | 'checkout' | 'booking' | 'planner' | 'map' | 'machine' | 'wallet';
 type Route = { origin: string; destination: string; stationCount?: number; fare?: number };
+type BookedTicket = Route & { id: number; code: string; status: 'unpaid' | 'ready' | 'completed' };
 type Go = (id: View) => void;
 type Step = 'queue' | 'scan' | 'success';
 type IconName = 'plus' | 'map' | 'scan' | 'wallet' | 'home';
@@ -118,6 +119,7 @@ function Header({ go }: { go: Go }) {
 
 type HomeProps = {
   go: Go;
+  bookToken: () => void;
   origin: string;
   setOrigin: (value: string) => void;
   destination: string;
@@ -151,7 +153,7 @@ function StationSelect({ id, label, value, onChange }: { id: string; label: stri
   return <div className="station-select"><small>{label}</small><button type="button" className="station-select-trigger" onClick={toggle}><span>{selected ? <><b>{selected.code}</b> {selected.nameTh}</> : <em>เลือกสถานี</em>}</span><i>⌄</i></button>{open && <div className="station-options"><input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="พิมพ์ค้นหาสถานี..." aria-label={`ค้นหา${label}`} autoFocus />{filteredStations.length ? filteredStations.map(station => <button type="button" key={station.code} className={station.code === selected?.code ? 'selected' : ''} onClick={() => { onChange(station.nameTh); setOpen(false); setQuery(''); }}><b>{station.code}</b><span>{station.nameTh}<small>{station.nameEn}</small></span></button>) : <p className="station-empty">ไม่พบสถานีที่ค้นหา</p>}</div>}</div>;
 }
 
-function Home({ go, origin, setOrigin, destination, setDestination }: HomeProps) {
+function Home({ go, bookToken, origin, setOrigin, destination, setDestination }: HomeProps) {
   const swap = () => { const old = origin; setOrigin(destination); setDestination(old); };
   const journey = calculateJourney(origin, destination);
   return <>
@@ -166,7 +168,7 @@ function Home({ go, origin, setOrigin, destination, setDestination }: HomeProps)
         <label><StationSelect id="destination" label="Destination" value={destination} onChange={setDestination} /></label>
       </div>
       <div className="journey-meta"><span><b>{journey.stationCount}</b> สถานี</span><span><b>{journey.stationCount * 3}</b> นาที</span><strong>฿{journey.fare}</strong></div>
-      <button className="primary full" onClick={() => go('checkout')} disabled={!origin || !destination || origin === destination}>จอง Token ล่วงหน้า <span>→</span></button>
+      <button className="primary full" onClick={bookToken} disabled={!origin || !destination || origin === destination}>จอง Token ล่วงหน้า <span>→</span></button>
     </section>
   </>;
 }
@@ -182,14 +184,151 @@ function RouteTicket({ origin, destination, live = false }: RouteTicketProps) {
   </article>;
 }
 
-function BookingEmpty({ go }: { go: Go }) {
-  return <section className="booking-container card"><div className="booking-page-head"><div><h1>ตั๋วของฉัน</h1></div><button className="add-ticket" onClick={() => go('planner')} aria-label="จองตั๋วใหม่">+</button></div><div className="empty-booking"><div className="empty-ticket-icon"><Icon name="map" /></div><h2>ไม่พบตั๋ว</h2><p>เริ่มวางแผนการเดินทาง<br/>และจอง Token ใบแรกของคุณ</p><button className="primary" onClick={() => go('planner')}>จองตั๋วใหม่ <span>→</span></button></div></section>;
+function MyTickets({ go, tickets, payTicket, useTicket }: { go: Go; tickets: BookedTicket[]; payTicket: (ticket: BookedTicket) => void; useTicket: (ticket: BookedTicket) => void }) {
+  const [redeemTicket, setRedeemTicket] = useState<BookedTicket | null>(null);
+  const confirmRedeem = () => {
+    if (!redeemTicket) return;
+    const ticket = redeemTicket;
+    setRedeemTicket(null);
+    useTicket(ticket);
+  };
+  return <section className="booking-container card"><div className="booking-page-head"><div><h1>ตั๋วของฉัน</h1><small>{tickets.length ? `${tickets.length} รายการ` : 'ยังไม่มีรายการ'}</small></div><button className="add-ticket" onClick={() => go('planner')} aria-label="จองตั๋วใหม่">+</button></div>{tickets.length ? <div className="booking-list">{tickets.map(ticket => <article className="booking-list-item" key={ticket.id}><div className="booking-list-head"><span>SMART TOKEN · {ticket.code}</span><b className={ticket.status}>{ticket.status === 'unpaid' ? 'รอชำระเงิน' : ticket.status === 'ready' ? 'พร้อมรับ Token' : 'เสร็จสิ้น'}</b></div><div className="booking-list-route"><div><small>จาก</small><strong>{ticket.origin}</strong></div><span>→</span><div><small>ถึง</small><strong>{ticket.destination}</strong></div></div><div className="booking-list-meta"><span>{ticket.stationCount} สถานี</span><strong>฿{ticket.fare}</strong>{ticket.status === 'unpaid' ? <button type="button" onClick={() => payTicket(ticket)}>ชำระเงิน</button> : ticket.status === 'ready' ? <button type="button" className="scan-qr-button" onClick={() => setRedeemTicket(ticket)} aria-label={`สแกน QR เพื่อรับ Token รหัส ${ticket.code}`}><span className="scan-ticket-icon" aria-hidden="true"><img src="/icons/scan-qr-transparent.png" alt=""/></span><small>Scan QR</small></button> : null}</div></article>)}</div> : <div className="empty-booking"><div className="empty-ticket-icon"><Icon name="map" /></div><h2>ไม่พบตั๋ว</h2><p>เริ่มวางแผนการเดินทาง<br/>และจอง Token ใบแรกของคุณ</p><button className="primary" onClick={() => go('planner')}>จองตั๋วใหม่ <span>→</span></button></div>}{redeemTicket && <div className="ticket-redeem-modal" role="dialog" aria-modal="true" aria-label="ยืนยันการแลกรับ Token" onClick={() => setRedeemTicket(null)}><section onClick={event => event.stopPropagation()}><span className="redeem-kicker">ยืนยันการแลกรับ</span><h2>รับ Token สำหรับตั๋วนี้?</h2><div className="redeem-code"><small>รหัสตั๋ว</small><strong>{redeemTicket.code}</strong></div><div className="redeem-route"><div><small>ต้นทาง</small><b>{redeemTicket.origin}</b></div><span>→</span><div><small>ปลายทาง</small><b>{redeemTicket.destination}</b></div></div><div className="redeem-meta"><span>{redeemTicket.stationCount} สถานี</span><span>ค่าโดยสาร ฿{redeemTicket.fare}</span></div><p>หลังยืนยัน ระบบจะเปิดหน้าสแกน QR ทันทีเพื่อแลกรับ Token สำหรับตั๋วรายการนี้</p><div className="redeem-actions"><button type="button" className="secondary" onClick={() => setRedeemTicket(null)}>ยกเลิก</button><button type="button" className="primary" onClick={confirmRedeem}>ยืนยันรับ Token <span>→</span></button></div></section></div>}</section>;
 }
 
-function BookingPlanner({ go, origin, setOrigin, destination, setDestination }: HomeProps) {
+function BookingPlanner({ go, bookToken, origin, setOrigin, destination, setDestination }: HomeProps) {
   const swap = () => { const old = origin; setOrigin(destination); setDestination(old); };
   const journey = calculateJourney(origin, destination);
-  return <><button className="back" onClick={() => go('booking')} aria-label="กลับหน้าตั๋ว">← ตั๋วของฉัน</button><h1>จองตั๋ว</h1><BookingInteractiveMap origin={origin} setOrigin={setOrigin} destination={destination} setDestination={setDestination}/><section className="planner card"><div className="section-head"><div><span className="eyebrow">ROUTE PLANNER</span><h2>เลือกเส้นทาง</h2></div><span className="line-pill">MRT</span></div><div className="route-fields"><label><StationSelect id="origin" label="Departure" value={origin} onChange={setOrigin} /></label><button className="swap" onClick={swap} aria-label="สลับสถานี">⇅</button><label><StationSelect id="destination" label="Destination" value={destination} onChange={setDestination} /></label></div><div className="journey-meta"><span><b>{journey.stationCount}</b> สถานี</span><span><b>{journey.stationCount * 3}</b> นาที</span><strong>฿{journey.fare}</strong></div><button className="primary full" onClick={() => go('checkout')} disabled={!origin || !destination || origin === destination}>จอง Token ล่วงหน้า <span>→</span></button></section></>;
+  return <><button className="back" onClick={() => go('booking')} aria-label="กลับหน้าตั๋ว">← ตั๋วของฉัน</button><h1>จองตั๋ว</h1><PlannerMapReplica origin={origin} setOrigin={setOrigin} destination={destination} setDestination={setDestination}/><section className="planner card"><div className="section-head"><div><span className="eyebrow">ROUTE PLANNER</span><h2>เลือกเส้นทาง</h2></div><span className="line-pill">MRT</span></div><div className="route-fields"><label><StationSelect id="origin" label="Departure" value={origin} onChange={setOrigin} /></label><button className="swap" onClick={swap} aria-label="สลับสถานี">⇅</button><label><StationSelect id="destination" label="Destination" value={destination} onChange={setDestination} /></label></div><div className="journey-meta"><span><b>{journey.stationCount}</b> สถานี</span><span><b>{journey.stationCount * 3}</b> นาที</span><strong>฿{journey.fare}</strong></div><button className="primary full" onClick={bookToken} disabled={!origin || !destination || origin === destination}>จอง Token ล่วงหน้า <span>→</span></button></section></>;
+}
+
+function PlannerMapReplica({ origin, setOrigin, destination, setDestination }: Pick<HomeProps, 'origin' | 'setOrigin' | 'destination' | 'setDestination'>) {
+  const [pendingStationCode, setPendingStationCode] = useState<string | null>(null);
+  const [mapZoom, setMapZoom] = useState(1);
+  const mapScrollRef = useRef<HTMLDivElement>(null);
+  const mapZoomRef = useRef(1);
+  const focusAnimationRef = useRef<number | null>(null);
+  const previousSelectionRef = useRef({ origin, destination });
+  const mapDrag = useRef({ active: false, x: 0, y: 0, left: 0, top: 0 });
+  const originStation = metroStations.find(station => station.nameTh === origin);
+  const destinationStation = metroStations.find(station => station.nameTh === destination);
+  const pendingStation = metroStations.find(station => station.code === pendingStationCode);
+  const journey = calculateJourney(origin, destination);
+  const routePoints = (origin && destination ? journey.codes : [])
+    .map(code => officialMapHotspots[code === 'BL10' ? 'PP16' : code])
+    .filter((point): point is { x: number; y: number } => Boolean(point));
+
+  useEffect(() => {
+    const previous = previousSelectionRef.current;
+    const focusStation = origin !== previous.origin ? originStation : destination !== previous.destination ? destinationStation : null;
+    previousSelectionRef.current = { origin, destination };
+    const scroller = mapScrollRef.current;
+    const point = focusStation && officialMapHotspots[focusStation.code === 'BL10' ? 'PP16' : focusStation.code];
+    if (!scroller || !point) return;
+    if (focusAnimationRef.current !== null) cancelAnimationFrame(focusAnimationRef.current);
+    const startLeft = scroller.scrollLeft;
+    const startTop = scroller.scrollTop;
+    const targetLeft = Math.max(0, Math.min(scroller.scrollWidth - scroller.clientWidth, (point.x / 100) * scroller.scrollWidth - scroller.clientWidth / 2));
+    const targetTop = Math.max(0, Math.min(scroller.scrollHeight - scroller.clientHeight, (point.y / 100) * scroller.scrollHeight - scroller.clientHeight / 2));
+    const startedAt = performance.now();
+    const animateFocus = (now: number) => {
+      const progress = Math.min(1, (now - startedAt) / 650);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      scroller.scrollLeft = startLeft + (targetLeft - startLeft) * eased;
+      scroller.scrollTop = startTop + (targetTop - startTop) * eased;
+      if (progress < 1) focusAnimationRef.current = requestAnimationFrame(animateFocus);
+      else focusAnimationRef.current = null;
+    };
+    focusAnimationRef.current = requestAnimationFrame(animateFocus);
+    return () => {
+      if (focusAnimationRef.current !== null) cancelAnimationFrame(focusAnimationRef.current);
+      focusAnimationRef.current = null;
+    };
+  }, [origin, destination, originStation?.code, destinationStation?.code]);
+
+  useEffect(() => {
+    const scroller = mapScrollRef.current;
+    if (!scroller) return;
+    const zoomWithWheel = (event: WheelEvent) => {
+      event.preventDefault();
+      if (focusAnimationRef.current !== null) cancelAnimationFrame(focusAnimationRef.current);
+      focusAnimationRef.current = null;
+      const stage = scroller.querySelector<HTMLElement>('.sim-map-stage');
+      if (!stage) return;
+      const viewportCenterX = scroller.scrollLeft + scroller.clientWidth / 2;
+      const viewportCenterY = scroller.scrollTop + scroller.clientHeight / 2;
+      const currentZoom = mapZoomRef.current;
+      const nextZoom = Math.min(2.2, Math.max(.65, currentZoom * Math.exp(-event.deltaY * .0015)));
+      if (Math.abs(nextZoom - currentZoom) < .001) return;
+      const ratio = nextZoom / currentZoom;
+      mapZoomRef.current = nextZoom;
+      stage.style.width = `${1000 * nextZoom}px`;
+      stage.getBoundingClientRect();
+      scroller.scrollLeft = viewportCenterX * ratio - scroller.clientWidth / 2;
+      scroller.scrollTop = viewportCenterY * ratio - scroller.clientHeight / 2;
+      setMapZoom(nextZoom);
+    };
+    scroller.addEventListener('wheel', zoomWithWheel, { passive: false });
+    return () => scroller.removeEventListener('wheel', zoomWithWheel);
+  }, []);
+
+  const startMapDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (event.button !== 0) return;
+    if (focusAnimationRef.current !== null) cancelAnimationFrame(focusAnimationRef.current);
+    focusAnimationRef.current = null;
+    const scroller = mapScrollRef.current;
+    if (!scroller) return;
+    mapDrag.current = { active: true, x: event.clientX, y: event.clientY, left: scroller.scrollLeft, top: scroller.scrollTop };
+    scroller.setPointerCapture(event.pointerId);
+    scroller.classList.add('dragging');
+  };
+  const moveMapDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const scroller = mapScrollRef.current;
+    if (!scroller || !mapDrag.current.active) return;
+    scroller.scrollLeft = mapDrag.current.left - (event.clientX - mapDrag.current.x);
+    scroller.scrollTop = mapDrag.current.top - (event.clientY - mapDrag.current.y);
+  };
+  const stopMapDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const scroller = mapScrollRef.current;
+    mapDrag.current.active = false;
+    if (scroller?.hasPointerCapture(event.pointerId)) scroller.releasePointerCapture(event.pointerId);
+    scroller?.classList.remove('dragging');
+  };
+  const chooseOrigin = () => {
+    if (!pendingStation || pendingStation.nameTh === destination) return;
+    setOrigin(pendingStation.nameTh);
+    setPendingStationCode(null);
+  };
+  const chooseDestination = () => {
+    if (!pendingStation || pendingStation.nameTh === origin) return;
+    setDestination(pendingStation.nameTh);
+    setPendingStationCode(null);
+  };
+  const resetRoute = () => {
+    setOrigin('');
+    setDestination('');
+    setPendingStationCode(null);
+  };
+
+  return <>
+    <div className="sim-map-heading planner-map-heading"><div><span className="eyebrow">INTERACTIVE MRT MAP</span><h1>เลือกสถานีบนแผนที่</h1></div><button type="button" onClick={resetRoute}>เริ่มใหม่</button></div>
+    <article className="sim-map-card planner-map-card">
+      <div ref={mapScrollRef} className="sim-map-scroll" aria-label="แผนที่รถไฟฟ้า MRT คลิกค้างแล้วลากเพื่อเลื่อน" onPointerDown={startMapDrag} onPointerMove={moveMapDrag} onPointerUp={stopMapDrag} onPointerCancel={stopMapDrag}>
+        <div className="official-map-stage sim-map-stage" style={{ width: `${1000 * mapZoom}px` }}>
+          <img className="official-mrt-map" src="/maps/mrt-network-map.jpg" alt="แผนที่รถไฟฟ้า MRT จาก BEM" width="6287" height="4788" style={{ width: '100%' }} draggable={false}/>
+          {routePoints.length > 1 && <svg className="map-route-link" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><polyline points={routePoints.map(point => `${point.x},${point.y}`).join(' ')}/></svg>}
+          {metroStations.filter(station => station.code !== 'BL10').map(station => {
+            const point = officialMapHotspots[station.code];
+            const isOrigin = station.code === originStation?.code || (station.code === 'PP16' && originStation?.code === 'BL10');
+            const isDestination = station.code === destinationStation?.code || (station.code === 'PP16' && destinationStation?.code === 'BL10');
+            const isTaoPoon = station.code === 'PP16';
+            return point && <button key={station.code} type="button" className={`map-hotspot ${station.code.startsWith('BL') ? 'blue' : 'purple'} ${isOrigin ? 'origin' : ''} ${isDestination ? 'destination' : ''}`} style={{ left: `${point.x}%`, top: `${point.y}%` }} onPointerDown={event => event.stopPropagation()} onClick={() => setPendingStationCode(station.code)} aria-label={`เลือก ${station.nameTh} ${isTaoPoon ? 'BL10 / PP16' : station.code}`}><span><b>{isTaoPoon ? 'BL10 / PP16' : station.code}</b>{station.nameTh}</span></button>;
+          })}
+        </div>
+      </div>
+      <div className="map-legend sim-map-legend"><span><i className="blue"/>สายสีน้ำเงิน</span><span><i className="purple"/>สายสีม่วง</span><b className="zoom-level">{Math.round(mapZoom * 100)}%</b><span className="drag-hint">คลิกค้างเพื่อลาก · Scroll เพื่อซูม</span></div>
+    </article>
+    {pendingStation && <div className="sim-station-action-modal" role="dialog" aria-modal="true" aria-label="เลือกการใช้งานสถานี" onClick={() => setPendingStationCode(null)}><section onClick={event => event.stopPropagation()}><span>เลือกสถานี</span><h2>{pendingStation.nameTh}</h2><p>{pendingStation.code === 'PP16' ? 'BL10 / PP16' : pendingStation.code}</p><div><button type="button" className="primary" onClick={chooseOrigin} disabled={pendingStation.nameTh === destination}>เลือกเป็นต้นทาง</button><button type="button" className="secondary" onClick={chooseDestination} disabled={pendingStation.nameTh === origin}>เลือกเป็นปลายทาง</button></div><button type="button" className="modal-back" onClick={() => setPendingStationCode(null)}>ยกเลิก</button></section></div>}
+  </>;
 }
 
 function BookingMap({ origin, destination }: Route) {
@@ -215,6 +354,17 @@ function BookingInteractiveMap({ origin, setOrigin, destination, setDestination 
     .filter((point): point is { x: number; y: number } => Boolean(point));
   const originPoint = originStation && officialMapHotspots[originStation.code === 'BL10' ? 'PP16' : originStation.code];
   const destinationPoint = destinationStation && officialMapHotspots[destinationStation.code === 'BL10' ? 'PP16' : destinationStation.code];
+  const clampCamera = (scale: number, x: number, y: number) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return { scale, x, y };
+    const overflowX = Math.max(0, canvas.clientWidth * scale - canvas.clientWidth);
+    const overflowY = Math.max(0, canvas.clientHeight * scale - canvas.clientHeight);
+    return {
+      scale,
+      x: Math.min(0, Math.max(-overflowX, x)),
+      y: Math.min(0, Math.max(-overflowY, y)),
+    };
+  };
   useEffect(() => {
     const previousRoute = previousRouteRef.current;
     const focusPoint = origin !== previousRoute.origin ? originPoint : destination !== previousRoute.destination ? destinationPoint : null;
@@ -225,8 +375,11 @@ function BookingInteractiveMap({ origin, setOrigin, destination, setDestination 
     if (animationRef.current !== null) cancelAnimationFrame(animationRef.current);
     const startCamera = { ...cameraRef.current };
     const targetScale = hasFocusedStationRef.current ? startCamera.scale : Math.max(2.5, startCamera.scale);
-    const targetX = canvas.clientWidth / 2 - (focusPoint.x / 100) * canvas.clientWidth * targetScale;
-    const targetY = canvas.clientHeight / 2 - (focusPoint.y / 100) * canvas.clientHeight * targetScale;
+    const targetCamera = clampCamera(
+      targetScale,
+      canvas.clientWidth / 2 - (focusPoint.x / 100) * canvas.clientWidth * targetScale,
+      canvas.clientHeight / 2 - (focusPoint.y / 100) * canvas.clientHeight * targetScale,
+    );
     const startedAt = performance.now();
     const duration = 650;
     hasFocusedStationRef.current = true;
@@ -234,12 +387,15 @@ function BookingInteractiveMap({ origin, setOrigin, destination, setDestination 
       const progress = Math.min(1, (now - startedAt) / duration);
       const eased = 1 - Math.pow(1 - progress, 3);
       const scale = startCamera.scale + (targetScale - startCamera.scale) * eased;
-      const x = startCamera.x + (targetX - startCamera.x) * eased;
-      const y = startCamera.y + (targetY - startCamera.y) * eased;
-      cameraRef.current = { scale, x, y };
+      const camera = clampCamera(
+        scale,
+        startCamera.x + (targetCamera.x - startCamera.x) * eased,
+        startCamera.y + (targetCamera.y - startCamera.y) * eased,
+      );
+      cameraRef.current = camera;
       stage.style.width = `${scale * 100}%`;
-      stage.style.left = `${progress === 1 ? Math.round(x) : x}px`;
-      stage.style.top = `${progress === 1 ? Math.round(y) : y}px`;
+      stage.style.left = `${progress === 1 ? Math.round(camera.x) : camera.x}px`;
+      stage.style.top = `${progress === 1 ? Math.round(camera.y) : camera.y}px`;
       if (progress < 1) animationRef.current = requestAnimationFrame(animateCamera);
       else { animationRef.current = null; setCameraScale(targetScale); }
     };
@@ -261,18 +417,17 @@ function BookingInteractiveMap({ origin, setOrigin, destination, setDestination 
       if (animationRef.current !== null) cancelAnimationFrame(animationRef.current);
       animationRef.current = null;
       const current = cameraRef.current;
-      const nextScale = Math.min(3.5, Math.max(.8, current.scale * Math.exp(-event.deltaY * .0015)));
+      const nextScale = Math.min(3.5, Math.max(1, current.scale * Math.exp(-event.deltaY * .0015)));
       const bounds = canvas.getBoundingClientRect();
       const pointerX = event.clientX - bounds.left;
       const pointerY = event.clientY - bounds.top;
       const mapX = (pointerX - current.x) / current.scale;
       const mapY = (pointerY - current.y) / current.scale;
-      const x = pointerX - mapX * nextScale;
-      const y = pointerY - mapY * nextScale;
-      cameraRef.current = { scale: nextScale, x, y };
+      const camera = clampCamera(nextScale, pointerX - mapX * nextScale, pointerY - mapY * nextScale);
+      cameraRef.current = camera;
       stage.style.width = `${nextScale * 100}%`;
-      stage.style.left = `${x}px`;
-      stage.style.top = `${y}px`;
+      stage.style.left = `${camera.x}px`;
+      stage.style.top = `${camera.y}px`;
       setCameraScale(nextScale);
     };
     canvas.addEventListener('wheel', zoomMap, { passive: false });
@@ -292,11 +447,14 @@ function BookingInteractiveMap({ origin, setOrigin, destination, setDestination 
     const deltaX = event.clientX - dragRef.current.x;
     const deltaY = event.clientY - dragRef.current.y;
     if (Math.abs(deltaX) > 3 || Math.abs(deltaY) > 3) dragRef.current.moved = true;
-    const x = dragRef.current.cameraX + deltaX;
-    const y = dragRef.current.cameraY + deltaY;
-    cameraRef.current = { ...cameraRef.current, x, y };
-    stageRef.current.style.left = `${x}px`;
-    stageRef.current.style.top = `${y}px`;
+    const camera = clampCamera(
+      cameraRef.current.scale,
+      dragRef.current.cameraX + deltaX,
+      dragRef.current.cameraY + deltaY,
+    );
+    cameraRef.current = camera;
+    stageRef.current.style.left = `${camera.x}px`;
+    stageRef.current.style.top = `${camera.y}px`;
   };
   const stopDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
     dragRef.current.active = false;
@@ -350,8 +508,9 @@ function BookingInteractiveMap({ origin, setOrigin, destination, setDestination 
 }
 
 function Checkout({ go, route, pay }: { go: Go; route: Route; pay: () => void }) {
+  const [paymentMethod, setPaymentMethod] = useState<'promptpay' | 'cash'>('promptpay');
   const fare = route.fare ?? calculateJourney(route.origin, route.destination).fare;
-  return <><button className="back" onClick={() => go('home')} aria-label="กลับหน้าหลัก">← กลับ</button><h1>พร้อมออกเดินทาง</h1><BookingMap {...route}/><RouteTicket {...route}/><div className="summary card"><h3>สรุปค่าใช้จ่าย</h3><p><span>ค่าโดยสาร</span><b>฿{fare}.00</b></p><p><span>ค่าบริการ</span><b>฿0.00</b></p><hr/><p className="total"><span>ยอดชำระ</span><b>฿{fare}.00</b></p></div><div className="payment card"><span className="wallet-icon">฿</span><div><b>Cash Balance</b><small>ยอดคงเหลือ ฿124.00</small></div><i>✓</i></div><button className="primary full" onClick={pay}>ยืนยันและชำระ ฿{fare} <span>→</span></button></>;
+  return <><button className="back" onClick={() => go('booking')} aria-label="กลับหน้าตั๋วของฉัน">← กลับ</button><h1>พร้อมออกเดินทาง</h1><RouteTicket {...route}/><div className="summary card"><h3>สรุปค่าใช้จ่าย</h3><p><span>ค่าโดยสาร</span><b>฿{fare}.00</b></p><p><span>ค่าบริการ</span><b>฿0.00</b></p><hr/><p className="total"><span>ยอดชำระ</span><b>฿{fare}.00</b></p></div><div className="payment-methods" role="radiogroup" aria-label="เลือกช่องทางชำระเงิน"><button type="button" className={`payment payment-option card ${paymentMethod === 'promptpay' ? 'selected' : ''}`} onClick={() => setPaymentMethod('promptpay')} role="radio" aria-checked={paymentMethod === 'promptpay'}><span className="payment-logo promptpay">PP</span><span className="payment-copy"><b>PromptPay</b><small>ชำระผ่านแอปธนาคารหรือ QR PromptPay</small></span><i>{paymentMethod === 'promptpay' ? '✓' : ''}</i></button><button type="button" className={`payment payment-option card ${paymentMethod === 'cash' ? 'selected' : ''}`} onClick={() => setPaymentMethod('cash')} role="radio" aria-checked={paymentMethod === 'cash'}><span className="payment-logo">฿</span><span className="payment-copy"><b>Cash Balance</b><small>ยอดคงเหลือ ฿124.00</small></span><i>{paymentMethod === 'cash' ? '✓' : ''}</i></button></div><button className="primary full" onClick={pay}>ยืนยันและชำระ ฿{fare} <span>→</span></button></>;
 }
 
 function Tickets({ go, route }: { go: Go; route: Route }) {
@@ -486,6 +645,20 @@ function MapView({ go, backView, origin, setOrigin, destination, setDestination 
   </>;
 }
 
+function TokenScanner({ go, ticket, onComplete }: { go: Go; ticket: BookedTicket | null; onComplete: (ticketId: number) => void }) {
+  const [scanned, setScanned] = useState(false);
+  useEffect(() => {
+    if (!ticket) return;
+    const id = setTimeout(() => {
+      setScanned(true);
+      onComplete(ticket.id);
+    }, 1900);
+    return () => clearTimeout(id);
+  }, [ticket?.id]);
+  if (!ticket) return <><button className="back" onClick={() => go('booking')}>← ตั๋วของฉัน</button><div className="scan-panel"><p>ไม่พบตั๋วสำหรับสแกน</p></div></>;
+  return <><button className="back" onClick={() => go('booking')} aria-label="กลับหน้าตั๋วของฉัน">← ตั๋วของฉัน</button><h1>{scanned ? 'รับ Token สำเร็จ' : 'สแกน QR เพื่อรับ Token'}</h1>{!scanned ? <div className="direct-scan-panel"><span className="scanner-code">รหัสตั๋ว <b>{ticket.code}</b></span><div className="scan-frame"><div className="qr"/><i className="scan-line"/></div><p>กำลังตรวจสอบ QR สำหรับเส้นทาง<br/><b>{ticket.origin}</b> → <b>{ticket.destination}</b></p><small>กรุณารอ ระบบกำลังยืนยันสิทธิ์การรับ Token</small></div> : <div className="success-panel"><div className="token"><i>V</i></div><span className="success-check">✓</span><h2>แลกรับ Token เรียบร้อย</h2><p>ตั๋วรหัส {ticket.code}<br/>{ticket.origin} → {ticket.destination}</p><button className="primary full" onClick={() => go('home')}>กลับหน้าหลัก <span>→</span></button></div>}</>;
+}
+
 function Wallet({ go }: { go: Go }) {
   const items: [string, string, string, string, boolean?][] = [['↙','คืนเงินตั๋วหมดอายุ','STT—09112 · 6 ก.ค.','+฿28',true],['↗','จอง Token · สายสีน้ำเงิน','STT—10293 · วันนี้','−฿28'],['+','เติม Cash Balance','PromptPay · 2 ก.ค.','+฿100',true]];
   return <><button className="back" onClick={() => go('home')} aria-label="กลับหน้าหลัก">← กลับ</button><h1>Cash Balance</h1><article className="wallet-hero"><small>ยอดเงินพร้อมใช้</small><strong>฿124.00</strong><span>อัปเดตเมื่อสักครู่</span></article><div className="quick-head"><h2>รายการล่าสุด</h2><button>ดูทั้งหมด</button></div><div className="transactions">{items.map(([icon,title,meta,amount,credit]) => <div key={title}><i className={credit ? 'credit' : ''}>{icon}</i><p><b>{title}</b><small>{meta}</small></p><strong className={credit ? 'plus' : ''}>{amount}</strong></div>)}</div><button className="secondary full">ยื่นคำขอคืนเงินจริง</button></>;
@@ -575,7 +748,7 @@ function DebugPanel({ view, route, go, setOrigin, setDestination, showToast, res
     <div className="debug-panel-head"><span>DEBUG</span><i>DEV</i></div>
     <p>View: <b>{view}</b></p>
     <p className="debug-route">{route.origin} <span>→</span> {route.destination}</p>
-    <div className="debug-group"><small>Navigate</small><div className="debug-grid"><button onClick={() => go('home')}>Home</button><button onClick={() => go('booking')}>Tickets</button><button onClick={() => go('planner')}>Booking</button><button onClick={() => go('checkout')}>Checkout</button><button onClick={() => go('map')}>Map</button><button onClick={() => go('machine')}>Machine</button><button onClick={() => go('wallet')}>Wallet</button></div></div>
+    <div className="debug-group"><small>Navigate</small><div className="debug-grid"><button onClick={() => go('home')}>Home</button><button onClick={() => go('booking')}>Tickets</button><button onClick={() => go('planner')}>Booking</button><button onClick={() => go('checkout')}>Checkout</button><button onClick={() => go('map')}>Map</button><button onClick={() => go('machine')}>QR Scanner</button><button onClick={() => go('wallet')}>Wallet</button></div></div>
     <div className="debug-group"><small>Test route</small><button className="debug-action" onClick={() => setRoute(20, 21)}>Short route · BL21 → BL22</button><button className="debug-action" onClick={() => setRoute(0, 37)}>Full line · BL01 → BL38</button><button className="debug-action" onClick={() => setRoute(38, 9)}>Purple → Blue · PP01 → BL10</button></div>
     <div className="debug-group"><small>Actions</small><button className="debug-action" onClick={showToast}>Show payment toast</button><button className="debug-reset" onClick={reset}>Reset simulation</button></div>
   </aside>;
@@ -586,12 +759,44 @@ function SimulateApp({ onWelcome }: { onWelcome: () => void }) {
   const [mapReturnView, setMapReturnView] = useState<View>('home');
   const [origin, setOrigin] = useState('');
   const [destination, setDestination] = useState('');
+  const [bookedTickets, setBookedTickets] = useState<BookedTicket[]>([]);
+  const [activeTicket, setActiveTicket] = useState<BookedTicket | null>(null);
   const [toast, setToast] = useState(false);
   const go: Go = id => { if (id === 'map' && view !== 'map') setMapReturnView(view); if (id === 'planner' && view !== 'map') { setOrigin(''); setDestination(''); } setView(id); window.scrollTo({ top: 0, behavior: 'smooth' }); };
-  const pay = () => { setToast(true); setTimeout(() => setToast(false), 2200); setTimeout(() => go('machine'), 350); };
-  const showDebugToast = () => { setToast(true); setTimeout(() => setToast(false), 2200); };
-  const reset = () => { setOrigin(''); setDestination(''); setToast(false); go('home'); };
   const journey = calculateJourney(origin, destination);
   const route: Route = { origin, destination, stationCount: journey.stationCount, fare: journey.fare };
-  return <><button className="welcome-return" onClick={onWelcome}>← Welcome</button><div className="ambient ambient-a"/><div className="ambient ambient-b"/><main className={`shell ${view === 'home' ? 'home-shell' : ''}`}><Header go={go}/><section key={view} className={`view active ${view !== 'home' ? 'subview' : ''}`}>{view === 'home' && <Home go={go} origin={origin} setOrigin={setOrigin} destination={destination} setDestination={setDestination}/>} {view === 'checkout' && <Checkout go={go} route={route} pay={pay}/>} {view === 'booking' && <BookingEmpty go={go}/>} {view === 'planner' && <BookingPlanner go={go} origin={origin} setOrigin={setOrigin} destination={destination} setDestination={setDestination}/>} {view === 'map' && <MapView go={go} backView={mapReturnView} origin={origin} setOrigin={setOrigin} destination={destination} setDestination={setDestination}/>} {view === 'machine' && <Machine go={go} route={route}/>} {view === 'wallet' && <Wallet go={go}/>}</section><Nav view={view} go={go}/></main><DebugPanel view={view} route={route} go={go} setOrigin={setOrigin} setDestination={setDestination} showToast={showDebugToast} reset={reset}/><div className={`toast ${toast ? 'show' : ''}`}>ชำระเงินสำเร็จ — ตั๋วพร้อมใช้งาน</div></>;
+  const bookToken = () => {
+    if (!origin || !destination || origin === destination) return;
+    let code = '';
+    do code = String(Math.floor(100000 + Math.random() * 900000));
+    while (bookedTickets.some(ticket => ticket.code === code));
+    const ticket: BookedTicket = { ...route, id: Date.now(), code, status: 'unpaid' };
+    setBookedTickets(current => [ticket, ...current]);
+    setActiveTicket(ticket);
+    go('booking');
+  };
+  const payTicket = (ticket: BookedTicket) => {
+    setActiveTicket(ticket);
+    go('checkout');
+  };
+  const useTicket = (ticket: BookedTicket) => {
+    if (ticket.status !== 'ready') return;
+    setActiveTicket(ticket);
+    go('machine');
+  };
+  const completeTicket = (ticketId: number) => {
+    setBookedTickets(current => current.map(ticket => ticket.id === ticketId ? { ...ticket, status: 'completed' } : ticket));
+    setActiveTicket(current => current?.id === ticketId ? { ...current, status: 'completed' } : current);
+  };
+  const pay = () => {
+    if (!activeTicket) return;
+    setBookedTickets(current => current.map(ticket => ticket.id === activeTicket.id ? { ...ticket, status: 'ready' } : ticket));
+    setActiveTicket(current => current ? { ...current, status: 'ready' } : current);
+    setToast(true);
+    setTimeout(() => setToast(false), 2200);
+    setTimeout(() => go('booking'), 350);
+  };
+  const showDebugToast = () => { setToast(true); setTimeout(() => setToast(false), 2200); };
+  const reset = () => { setOrigin(''); setDestination(''); setBookedTickets([]); setActiveTicket(null); setToast(false); go('home'); };
+  return <><button className="welcome-return" onClick={onWelcome}>← Welcome</button><div className="ambient ambient-a"/><div className="ambient ambient-b"/><main className={`shell ${view === 'home' ? 'home-shell' : ''}`}><Header go={go}/><section key={view} className={`view active ${view !== 'home' ? 'subview' : ''}`}>{view === 'home' && <Home go={go} bookToken={bookToken} origin={origin} setOrigin={setOrigin} destination={destination} setDestination={setDestination}/>} {view === 'checkout' && <Checkout go={go} route={activeTicket ?? route} pay={pay}/>} {view === 'booking' && <MyTickets go={go} tickets={bookedTickets} payTicket={payTicket} useTicket={useTicket}/>} {view === 'planner' && <BookingPlanner go={go} bookToken={bookToken} origin={origin} setOrigin={setOrigin} destination={destination} setDestination={setDestination}/>} {view === 'map' && <MapView go={go} backView={mapReturnView} origin={origin} setOrigin={setOrigin} destination={destination} setDestination={setDestination}/>} {view === 'machine' && <TokenScanner go={go} ticket={activeTicket} onComplete={completeTicket}/>} {view === 'wallet' && <Wallet go={go}/>}</section><Nav view={view} go={go}/></main><DebugPanel view={view} route={route} go={go} setOrigin={setOrigin} setDestination={setDestination} showToast={showDebugToast} reset={reset}/><div className={`toast ${toast ? 'show' : ''}`}>ชำระเงินสำเร็จ — พร้อมรับ Token</div></>;
 }
