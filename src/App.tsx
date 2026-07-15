@@ -5,11 +5,22 @@ import './welcome.css';
 type View = 'home' | 'checkout' | 'booking' | 'planner' | 'map' | 'machine' | 'wallet';
 type Route = { origin: string; destination: string; stationCount?: number; fare?: number };
 type BookedTicket = Route & { id: number; code: string; status: 'unpaid' | 'ready' | 'completed' };
-type Go = (id: View) => void;
+type Go = (id: View | 'back') => void;
 type Step = 'queue' | 'scan' | 'success';
 type IconName = 'plus' | 'map' | 'scan' | 'wallet' | 'home';
 
 const publicAsset = (path: string) => `${import.meta.env.BASE_URL}${path}`;
+
+type WalletLog = { id: string; title: string; meta: string; amount: number; credit?: boolean };
+const walletLogStorageKey = 'tokengo-wallet-logs';
+const readWalletLogs = (): WalletLog[] => {
+  try { return JSON.parse(localStorage.getItem(walletLogStorageKey) ?? '[]') as WalletLog[]; }
+  catch { return []; }
+};
+const appendWalletLog = (entry: WalletLog) => {
+  try { localStorage.setItem(walletLogStorageKey, JSON.stringify([entry, ...readWalletLogs()].slice(0, 20))); }
+  catch { /* Storage can be unavailable in private browsing. */ }
+};
 
 const blueLineStations = [
   { code: 'BL01', nameTh: 'ท่าพระ', nameEn: 'Tha Phra' }, { code: 'BL02', nameTh: 'จรัญฯ 13', nameEn: 'Charan 13' },
@@ -69,6 +80,13 @@ function createLineGraph(stations: typeof blueLineStations) {
 }
 
 const metroGraph = { ...createLineGraph(blueLineStations), ...createLineGraph(purpleLineStations) };
+// The Blue Line branches at Tha Phra (BL01): BL32 ↔ BL01 ↔ BL33.
+// BL32 and BL33 are not directly adjacent even though their codes are sequential.
+metroGraph.BL32 = metroGraph.BL32.filter(code => code !== 'BL33');
+metroGraph.BL33 = metroGraph.BL33.filter(code => code !== 'BL32');
+metroGraph.BL32.push('BL01');
+metroGraph.BL33.push('BL01');
+metroGraph.BL01.push('BL32', 'BL33');
 metroGraph.BL10.push('PP16');
 metroGraph.PP16.push('BL10');
 
@@ -115,8 +133,32 @@ function BellIcon() {
 
 function Header({ go }: { go: Go }) {
   const [profileOpen, setProfileOpen] = useState(false);
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => localStorage.getItem('tokengo-theme') === 'dark' ? 'dark' : 'light');
+  const [language, setLanguage] = useState<'th' | 'en'>(() => localStorage.getItem('tokengo-language') === 'en' ? 'en' : 'th');
   const openView = (view: View) => { setProfileOpen(false); go(view); };
-  return <header className="topbar"><button className="brand plain" onClick={() => go('home')}><span className="brand-mark">M</span><span>Token<span>Go</span></span></button><div className="top-actions"><button className="icon-button" onClick={() => go('map')} aria-label="เปิดแผนที่"><Icon name="map" /></button><button className="avatar" onClick={() => setProfileOpen(current => !current)} aria-expanded={profileOpen} aria-label="เปิดโปรไฟล์">NP</button>{profileOpen && <div className="profile-slider"><button type="button" onClick={() => openView('home')}><BellIcon /><span>Notify</span><i className="dot" /></button><button type="button" onClick={() => openView('wallet')}><Icon name="wallet" /><span>กระเป๋า</span></button></div>}</div></header>;
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    localStorage.setItem('tokengo-theme', theme);
+  }, [theme]);
+  useEffect(() => {
+    document.documentElement.lang = language;
+    localStorage.setItem('tokengo-language', language);
+  }, [language]);
+  const isThai = language === 'th';
+  return <header className="topbar">
+    <button className="brand plain" onClick={() => go('home')}><span className="brand-mark">M</span><span>Token<span>Go</span></span></button>
+    <div className="top-actions">
+      <button className="icon-button" onClick={() => go('map')} aria-label={isThai ? 'เปิดแผนที่' : 'Open map'}><Icon name="map" /></button>
+      <button className="avatar" onClick={() => setProfileOpen(current => !current)} aria-expanded={profileOpen} aria-label={isThai ? 'เปิดโปรไฟล์' : 'Open profile'}>NP</button>
+      {profileOpen && <div className="profile-slider profile-settings">
+        <div className="profile-summary"><span>NP</span><div><b>Napat</b><small>TokenGo Member</small></div></div>
+        <div className="profile-links"><button type="button" onClick={() => openView('home')}><BellIcon /><span>Notify</span><i className="dot" /></button><button type="button" onClick={() => openView('wallet')}><Icon name="wallet" /><span>{isThai ? 'กระเป๋า' : 'Wallet'}</span></button></div>
+        <div className="settings-divider"><span>{isThai ? 'การตั้งค่า' : 'Settings'}</span></div>
+        <div className="profile-setting"><div><b>{isThai ? 'ธีม' : 'Theme'}</b><small>{theme === 'light' ? 'Light mode' : 'Dark mode'}</small></div><div className="setting-options"><button type="button" className={theme === 'light' ? 'selected' : ''} onClick={() => setTheme('light')} aria-pressed={theme === 'light'}>☀</button><button type="button" className={theme === 'dark' ? 'selected' : ''} onClick={() => setTheme('dark')} aria-pressed={theme === 'dark'}>☾</button></div></div>
+        <div className="profile-setting"><div><b>{isThai ? 'ภาษา' : 'Language'}</b><small>{isThai ? 'ภาษาไทย' : 'English'}</small></div><div className="setting-options language-options"><button type="button" className={language === 'th' ? 'selected' : ''} onClick={() => setLanguage('th')} aria-pressed={language === 'th'}>TH</button><button type="button" className={language === 'en' ? 'selected' : ''} onClick={() => setLanguage('en')} aria-pressed={language === 'en'}>EN</button></div></div>
+      </div>}
+    </div>
+  </header>;
 }
 
 type HomeProps = {
@@ -155,23 +197,45 @@ function StationSelect({ id, label, value, onChange }: { id: string; label: stri
   return <div className="station-select"><small>{label}</small><button type="button" className="station-select-trigger" onClick={toggle}><span>{selected ? <><b>{selected.code}</b> {selected.nameTh}</> : <em>เลือกสถานี</em>}</span><i>⌄</i></button>{open && <div className="station-options"><input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="พิมพ์ค้นหาสถานี..." aria-label={`ค้นหา${label}`} autoFocus />{filteredStations.length ? filteredStations.map(station => <button type="button" key={station.code} className={station.code === selected?.code ? 'selected' : ''} onClick={() => { onChange(station.nameTh); setOpen(false); setQuery(''); }}><b>{station.code}</b><span>{station.nameTh}<small>{station.nameEn}</small></span></button>) : <p className="station-empty">ไม่พบสถานีที่ค้นหา</p>}</div>}</div>;
 }
 
-function Home({ go, bookToken, origin, setOrigin, destination, setDestination }: HomeProps) {
-  const swap = () => { const old = origin; setOrigin(destination); setDestination(old); };
-  const journey = calculateJourney(origin, destination);
+function Home({ go }: HomeProps) {
+  const [activeSlide, setActiveSlide] = useState(0);
+  const [isHomeScrolled, setIsHomeScrolled] = useState(false);
+  const slides = [
+    { kicker: 'SMART TOKEN', title: 'จองล่วงหน้า\nเดินทางได้ไวขึ้น', detail: 'เลือกต้นทางและปลายทางได้ง่ายในไม่กี่ขั้นตอน' },
+    { kicker: 'MRT BLUE LINE', title: 'ทุกสถานี\nอยู่ใกล้แค่ปลายนิ้ว', detail: 'เปิดดูแผนที่และวางเส้นทางก่อนออกเดินทาง' },
+    { kicker: 'TOKEN GO', title: 'พร้อมรับ Token\nเมื่อถึงสถานี', detail: 'ติดตามตั๋วและสถานะการรับ Token ได้ตลอดเวลา' },
+  ];
+  useEffect(() => {
+    const timer = window.setInterval(() => setActiveSlide(current => (current + 1) % slides.length), 4500);
+    return () => window.clearInterval(timer);
+  }, [slides.length]);
+  useEffect(() => {
+    const view = document.querySelector('.home-shell .view.active');
+    if (!(view instanceof HTMLElement)) return;
+    const updateScrollEffect = () => setIsHomeScrolled(view.scrollTop > 6);
+    updateScrollEffect();
+    view.addEventListener('scroll', updateScrollEffect, { passive: true });
+    return () => view.removeEventListener('scroll', updateScrollEffect);
+  }, []);
   return <>
-    <div className="hello"><p>สวัสดีตอนเช้า</p><h1>ไปไหนต่อดี<br/><em>วันนี้?</em></h1></div>
+    <div className={`home-scroll-blur ${isHomeScrolled ? 'visible' : ''}`} aria-hidden="true" />
+    <section className="home-slideshow" aria-label="ข่าวสารและบริการ">
+      <div className="home-slides" aria-live="polite">
+        <div className="home-slide-track" style={{ transform: `translateX(-${activeSlide * 100}%)` }}>
+          {slides.map((slide, index) => <article className={`home-slide home-slide-${index + 1} ${activeSlide === index ? 'active' : ''}`} aria-hidden={activeSlide !== index} key={slide.kicker}>
+            <span>{slide.kicker}</span>
+            <h1>{slide.title.split('\n').map((line, lineIndex) => <span key={line}>{line}{lineIndex === 0 && <br/>}</span>)}</h1>
+            <p>{slide.detail}</p>
+            <i className="slide-route" aria-hidden="true"><b/><b/><b/></i>
+          </article>)}
+        </div>
+      </div>
+      <div className="home-slide-dots" role="group" aria-label="เลือกสไลด์">
+        {slides.map((slide, index) => <button type="button" className={activeSlide === index ? 'active' : ''} onClick={() => setActiveSlide(index)} aria-label={`สไลด์ ${index + 1}: ${slide.kicker}`} aria-pressed={activeSlide === index} key={slide.kicker}/>) }
+      </div>
+    </section>
     <article className="balance-card"><div><span>Cash Balance</span><strong>฿124.00</strong></div><button onClick={() => go('wallet')}>ดูรายการ <span>→</span></button><div className="card-orbit" /></article>
     <div className="home-menu"><button className="home-menu-item" onClick={() => go('planner')}><span><Icon name="plus" /></span><b>จองตั๋วเลย</b></button><button className="home-menu-item" onClick={() => go('map')}><span><Icon name="map" /></span><b>ดูแผนที่</b></button><button className="home-menu-item" onClick={() => go('booking')}><span><Icon name="scan" /></span><b>ตั๋วของฉัน</b></button><button className="home-menu-item" onClick={() => go('wallet')}><span><Icon name="wallet" /></span><b>กระเป๋า</b></button></div>
-    <section className="planner card">
-      <div className="section-head"><div><span className="eyebrow">วางแผนการเดินทาง</span><h2>เลือกเส้นทาง</h2></div><span className="line-pill">MRT</span></div>
-      <div className="route-fields">
-        <label><StationSelect id="origin" label="Departure" value={origin} onChange={setOrigin} /></label>
-        <button className="swap" onClick={swap} aria-label="สลับสถานี">⇅</button>
-        <label><StationSelect id="destination" label="Destination" value={destination} onChange={setDestination} /></label>
-      </div>
-      <div className="journey-meta"><span><b>{journey.stationCount}</b> สถานี</span><span><b>{journey.stationCount * 3}</b> นาที</span><strong>฿{journey.fare}</strong></div>
-      <button className="primary full" onClick={bookToken} disabled={!origin || !destination || origin === destination}>จอง Token ล่วงหน้า <span>→</span></button>
-    </section>
   </>;
 }
 
@@ -186,7 +250,13 @@ function RouteTicket({ origin, destination, live = false }: RouteTicketProps) {
   </article>;
 }
 
-function MyTickets({ go, tickets, payTicket, useTicket }: { go: Go; tickets: BookedTicket[]; payTicket: (ticket: BookedTicket) => void; useTicket: (ticket: BookedTicket) => void }) {
+type MyTicketsProps = { go: Go; tickets: BookedTicket[]; payTicket: (ticket: BookedTicket) => void; useTicket: (ticket: BookedTicket) => void };
+
+function MyTickets(props: MyTicketsProps) {
+  return <><button type="button" className="back booking-back" onClick={() => props.go('home')} aria-label="กลับหน้าหลัก">← กลับหน้าหลัก</button><MyTicketsContent {...props}/></>;
+}
+
+function MyTicketsContent({ go, tickets, payTicket, useTicket }: MyTicketsProps) {
   const [redeemTicket, setRedeemTicket] = useState<BookedTicket | null>(null);
   const confirmRedeem = () => {
     if (!redeemTicket) return;
@@ -317,7 +387,7 @@ function PlannerMapReplica({ origin, setOrigin, destination, setDestination }: P
       <div ref={mapScrollRef} className="sim-map-scroll" aria-label="แผนที่รถไฟฟ้า MRT คลิกค้างแล้วลากเพื่อเลื่อน" onPointerDown={startMapDrag} onPointerMove={moveMapDrag} onPointerUp={stopMapDrag} onPointerCancel={stopMapDrag}>
         <div className="official-map-stage sim-map-stage" style={{ width: `${1000 * mapZoom}px` }}>
           <img className="official-mrt-map" src={publicAsset('maps/mrt-network-map.jpg')} alt="แผนที่รถไฟฟ้า MRT จาก BEM" width="6287" height="4788" style={{ width: '100%' }} draggable={false}/>
-          {routePoints.length > 1 && <svg className="map-route-link" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><polyline points={routePoints.map(point => `${point.x},${point.y}`).join(' ')}/></svg>}
+          {routePoints.length > 1 && <svg className="map-route-link" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><polyline pathLength={1} points={routePoints.map(point => `${point.x},${point.y}`).join(' ')}/></svg>}
           {metroStations.filter(station => station.code !== 'BL10').map(station => {
             const point = officialMapHotspots[station.code];
             const isOrigin = station.code === originStation?.code || (station.code === 'PP16' && originStation?.code === 'BL10');
@@ -654,7 +724,7 @@ function TokenScanner({ go, ticket, onComplete }: { go: Go; ticket: BookedTicket
     const id = setTimeout(() => {
       setScanned(true);
       onComplete(ticket.id);
-    }, 1900);
+    }, 2300);
     return () => clearTimeout(id);
   }, [ticket?.id]);
   if (!ticket) return <><button className="back" onClick={() => go('booking')}>← ตั๋วของฉัน</button><div className="scan-panel"><p>ไม่พบตั๋วสำหรับสแกน</p></div></>;
@@ -662,6 +732,18 @@ function TokenScanner({ go, ticket, onComplete }: { go: Go; ticket: BookedTicket
 }
 
 function Wallet({ go }: { go: Go }) {
+  const [items] = useState<WalletLog[]>(readWalletLogs);
+  return <>
+    <button className="back" onClick={() => go('home')} aria-label="กลับหน้าหลัก">← กลับ</button>
+    <h1>Cash Balance</h1>
+    <article className="wallet-hero"><small>ยอดเงินพร้อมใช้</small><strong>฿124.00</strong><span>อัปเดตเมื่อสักครู่</span></article>
+    <div className="quick-head"><h2>รายการล่าสุด</h2><span className="wallet-log-count">{items.length} รายการ</span></div>
+    {items.length ? <div className="transactions">{items.map(item => <div key={item.id}><i className={item.credit ? 'credit' : ''}>{item.credit ? '↙' : '↗'}</i><p><b>{item.title}</b><small>{item.meta}</small></p><strong className={item.credit ? 'plus' : ''}>{item.credit ? '+' : '−'}฿{Math.abs(item.amount)}</strong></div>)}</div> : <div className="wallet-log-empty"><span>⌁</span><b>ยังไม่มีรายการ</b><small>รายการชำระเงินจะแสดงที่นี่โดยอัตโนมัติ</small></div>}
+    <button className="secondary full">ยื่นคำขอคืนเงินจริง</button>
+  </>;
+}
+
+function WalletLegacy({ go }: { go: Go }) {
   const items: [string, string, string, string, boolean?][] = [['↙','คืนเงินตั๋วหมดอายุ','STT—09112 · 6 ก.ค.','+฿28',true],['↗','จอง Token · สายสีน้ำเงิน','STT—10293 · วันนี้','−฿28'],['+','เติม Cash Balance','PromptPay · 2 ก.ค.','+฿100',true]];
   return <><button className="back" onClick={() => go('home')} aria-label="กลับหน้าหลัก">← กลับ</button><h1>Cash Balance</h1><article className="wallet-hero"><small>ยอดเงินพร้อมใช้</small><strong>฿124.00</strong><span>อัปเดตเมื่อสักครู่</span></article><div className="quick-head"><h2>รายการล่าสุด</h2><button>ดูทั้งหมด</button></div><div className="transactions">{items.map(([icon,title,meta,amount,credit]) => <div key={title}><i className={credit ? 'credit' : ''}>{icon}</i><p><b>{title}</b><small>{meta}</small></p><strong className={credit ? 'plus' : ''}>{amount}</strong></div>)}</div><button className="secondary full">ยื่นคำขอคืนเงินจริง</button></>;
 }
@@ -758,13 +840,47 @@ function DebugPanel({ view, route, go, setOrigin, setDestination, showToast, res
 
 function SimulateApp({ onWelcome }: { onWelcome: () => void }) {
   const [view, setView] = useState<View>('home');
+  const navigationHistory = useRef<View[]>([]);
   const [mapReturnView, setMapReturnView] = useState<View>('home');
   const [origin, setOrigin] = useState('');
   const [destination, setDestination] = useState('');
   const [bookedTickets, setBookedTickets] = useState<BookedTicket[]>([]);
   const [activeTicket, setActiveTicket] = useState<BookedTicket | null>(null);
   const [toast, setToast] = useState(false);
-  const go: Go = id => { if (id === 'map' && view !== 'map') setMapReturnView(view); if (id === 'planner' && view !== 'map') { setOrigin(''); setDestination(''); } setView(id); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+  const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
+  const go: Go = id => {
+    if (id === 'back') {
+      let previous = navigationHistory.current.pop();
+      while (previous === view) previous = navigationHistory.current.pop();
+      setView(previous ?? 'home');
+      scrollToTop();
+      return;
+    }
+    if (id === view) return;
+    navigationHistory.current.push(view);
+    if (id === 'map' && view !== 'map') setMapReturnView(view);
+    if (id === 'planner' && view !== 'map') { setOrigin(''); setDestination(''); }
+    setView(id);
+    scrollToTop();
+  };
+  const replaceView = (id: View) => {
+    if (navigationHistory.current.at(-1) === id) navigationHistory.current.pop();
+    setView(id);
+    scrollToTop();
+  };
+  useEffect(() => {
+    const shell = document.querySelector('.shell');
+    if (!(shell instanceof HTMLElement)) return;
+    const handleBackClick = (event: Event) => {
+      const target = event.target;
+      if (!(target instanceof Element) || !target.closest('button.back')) return;
+      event.preventDefault();
+      event.stopPropagation();
+      go('back');
+    };
+    shell.addEventListener('click', handleBackClick, true);
+    return () => shell.removeEventListener('click', handleBackClick, true);
+  }, [view]);
   const journey = calculateJourney(origin, destination);
   const route: Route = { origin, destination, stationCount: journey.stationCount, fare: journey.fare };
   const bookToken = () => {
@@ -792,13 +908,19 @@ function SimulateApp({ onWelcome }: { onWelcome: () => void }) {
   };
   const pay = () => {
     if (!activeTicket) return;
+    appendWalletLog({
+      id: `${activeTicket.id}-${Date.now()}`,
+      title: `จอง Token · ${activeTicket.origin} → ${activeTicket.destination}`,
+      meta: `${activeTicket.code} · ${new Date().toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' })}`,
+      amount: activeTicket.fare ?? calculateJourney(activeTicket.origin, activeTicket.destination).fare,
+    });
     setBookedTickets(current => current.map(ticket => ticket.id === activeTicket.id ? { ...ticket, status: 'ready' } : ticket));
     setActiveTicket(current => current ? { ...current, status: 'ready' } : current);
     setToast(true);
     setTimeout(() => setToast(false), 2200);
-    setTimeout(() => go('booking'), 350);
+    setTimeout(() => replaceView('booking'), 350);
   };
   const showDebugToast = () => { setToast(true); setTimeout(() => setToast(false), 2200); };
-  const reset = () => { setOrigin(''); setDestination(''); setBookedTickets([]); setActiveTicket(null); setToast(false); go('home'); };
+  const reset = () => { navigationHistory.current = []; localStorage.removeItem(walletLogStorageKey); setOrigin(''); setDestination(''); setBookedTickets([]); setActiveTicket(null); setToast(false); replaceView('home'); };
   return <><button className="welcome-return" onClick={onWelcome}>← Welcome</button><div className="ambient ambient-a"/><div className="ambient ambient-b"/><main className={`shell ${view === 'home' ? 'home-shell' : ''}`}><Header go={go}/><section key={view} className={`view active ${view !== 'home' ? 'subview' : ''}`}>{view === 'home' && <Home go={go} bookToken={bookToken} origin={origin} setOrigin={setOrigin} destination={destination} setDestination={setDestination}/>} {view === 'checkout' && <Checkout go={go} route={activeTicket ?? route} pay={pay}/>} {view === 'booking' && <MyTickets go={go} tickets={bookedTickets} payTicket={payTicket} useTicket={useTicket}/>} {view === 'planner' && <BookingPlanner go={go} bookToken={bookToken} origin={origin} setOrigin={setOrigin} destination={destination} setDestination={setDestination}/>} {view === 'map' && <MapView go={go} backView={mapReturnView} origin={origin} setOrigin={setOrigin} destination={destination} setDestination={setDestination}/>} {view === 'machine' && <TokenScanner go={go} ticket={activeTicket} onComplete={completeTicket}/>} {view === 'wallet' && <Wallet go={go}/>}</section><Nav view={view} go={go}/></main><DebugPanel view={view} route={route} go={go} setOrigin={setOrigin} setDestination={setDestination} showToast={showDebugToast} reset={reset}/><div className={`toast ${toast ? 'show' : ''}`}>ชำระเงินสำเร็จ — พร้อมรับ Token</div></>;
 }
