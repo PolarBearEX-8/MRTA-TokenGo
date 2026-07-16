@@ -57,17 +57,210 @@ const purpleLineStations = [
 
 const metroStations = [...blueLineStations, ...purpleLineStations];
 
+type Language = 'th' | 'en';
+
+const thaiEnglishPhrases: [string, string][] = [
+  ['รายการชำระเงินจะแสดงที่นี่โดยอัตโนมัติ', 'Payment transactions will appear here automatically'],
+  ['หลังยืนยัน ระบบจะเปิดหน้าสแกน QR ทันทีเพื่อแลกรับ Token สำหรับตั๋วรายการนี้', 'After confirmation, the QR scanner will open to redeem the Token for this ticket'],
+  ['กดจุดสถานีบนแผนที่ครั้งแรกเพื่อตั้งต้นทาง และครั้งที่สองเพื่อตั้งปลายทาง ระบบจะคำนวณราคาให้ทันที', 'Select the first station as your origin and the second as your destination. The fare will be calculated instantly'],
+  ['วางแผนเส้นทาง จอง Token และติดตามการเดินทางของคุณในที่เดียว', 'Plan routes, book Tokens, and track your journey in one place'],
+  ['QR ที่ตู้มีอายุเพียง 45 วินาที และใช้ได้ครั้งเดียว', 'The machine QR lasts 45 seconds and can only be used once'],
+  ['ตู้จะสร้าง QR ชั่วคราวให้คุณสแกน', 'The machine will generate a temporary QR for you to scan'],
+  ['ตั๋วนี้ไม่ใช่ QR สำหรับเดินทาง', 'This ticket is not a travel QR code'],
+  ['กรุณารอ ระบบกำลังยืนยันสิทธิ์การรับ Token', 'Please wait while your Token eligibility is verified'],
+  ['กำลังตรวจสอบ QR สำหรับเส้นทาง', 'Verifying the QR for your journey'],
+  ['เลือกต้นทางและปลายทางเพื่อดูเส้นทาง', 'Select an origin and destination to view the route'],
+  ['เลือกต้นทางและปลายทางได้ง่ายในไม่กี่ขั้นตอน', 'Choose your origin and destination in a few simple steps'],
+  ['เปิดดูแผนที่และวางเส้นทางก่อนออกเดินทาง', 'View the map and plan your route before travelling'],
+  ['ติดตามตั๋วและสถานะการรับ Token ได้ตลอดเวลา', 'Track your tickets and Token status at any time'],
+  ['และจอง Token ใบแรกของคุณ', 'and book your first Token'],
+  ['เริ่มวางแผนการเดินทาง', 'Start planning your journey'],
+  ['แผนที่รถไฟฟ้า MRT คลิกค้างแล้วลากเพื่อเลื่อน', 'MRT map — click and drag to move'],
+  ['ลากเพื่อเลื่อน · Scroll เพื่อซูม · กดหมุดเพื่อเลือกสถานี', 'Drag to move · Scroll to zoom · Select a station marker'],
+  ['คลิกค้างเพื่อลาก · Scroll เพื่อซูม', 'Click and drag · Scroll to zoom'],
+  ['คลิกค้างเพื่อเลื่อน · Scroll เพื่อซูม', 'Click and drag · Scroll to zoom'],
+  ['กดจุดบนแผนที่เพื่อเลือกสถานี', 'Select a station on the map'],
+  ['เปิดตัวอ่านพิกัดแล้ว — คลิกบนแผนที่เพื่ออ่าน x, y', 'Coordinate reader is on — select the map to read x, y'],
+  ['คลิกบนแผนที่เพื่ออ่านพิกัด', 'Select the map to read coordinates'],
+  ['ปิดอยู่ — เปิดเมื่อต้องการปรับหมุด', 'Off — enable it to adjust station markers'],
+  ['เลือกการใช้งานสถานี', 'Choose station action'],
+  ['เลือกเป็นต้นทาง', 'Set as origin'],
+  ['เลือกเป็นปลายทาง', 'Set as destination'],
+  ['ใช้เส้นทางนี้เพื่อจองตั๋ว', 'Use this route to book'],
+  ['เลือกสถานีบนแผนที่', 'Select stations on the map'],
+  ['เลือกสถานีต้นทาง', 'Select origin station'],
+  ['เลือกสถานีปลายทาง', 'Select destination station'],
+  ['เลือกสถานีครบแล้ว', 'Stations selected'],
+  ['กดเลือกสถานีแรก', 'Select the first station'],
+  ['กดเลือกสถานีที่สอง', 'Select the second station'],
+  ['ยังไม่ได้เลือก', 'Not selected'],
+  ['พิมพ์ค้นหาสถานี...', 'Search for a station...'],
+  ['ไม่พบสถานีที่ค้นหา', 'No matching stations'],
+  ['ค้นหาDeparture', 'Search departure'],
+  ['ค้นหาDestination', 'Search destination'],
+  ['สลับสถานี', 'Swap stations'],
+  ['เลือกเส้นทาง', 'Select a route'],
+  ['จอง Token ล่วงหน้า', 'Book Token in advance'],
+  ['จองล่วงหน้า', 'Book ahead'],
+  ['เดินทางได้ไวขึ้น', 'Travel faster'],
+  ['ทุกสถานี', 'Every station'],
+  ['อยู่ใกล้แค่ปลายนิ้ว', 'is at your fingertips'],
+  ['พร้อมรับ Token', 'Token ready'],
+  ['เมื่อถึงสถานี', 'when you arrive'],
+  ['ข่าวสารและบริการ', 'News and services'],
+  ['เลือกสไลด์', 'Select slide'],
+  ['สไลด์', 'Slide'],
+  ['ดูรายการ', 'View activity'],
+  ['จองตั๋วเลย', 'Book a ticket'],
+  ['ดูแผนที่', 'View map'],
+  ['ตั๋วของฉัน', 'My tickets'],
+  ['กระเป๋า', 'Wallet'],
+  ['กลับหน้าหลัก', 'Back to Home'],
+  ['กลับหน้าตั๋วของฉัน', 'Back to My tickets'],
+  ['กลับหน้าตั๋ว', 'Back to tickets'],
+  ['กลับหน้าก่อนหน้า', 'Back to previous page'],
+  ['หน้าจองตั๋ว', 'Booking'],
+  ['หน้าหลัก', 'Home'],
+  ['กลับ', 'Back'],
+  ['ย้อนกลับ', 'Back'],
+  ['จองตั๋วใหม่', 'Book a new ticket'],
+  ['ยังไม่มีรายการ', 'No activity yet'],
+  ['รอชำระเงิน', 'Awaiting payment'],
+  ['เสร็จสิ้น', 'Completed'],
+  ['ชำระเงิน', 'Pay now'],
+  ['ไม่พบตั๋วสำหรับสแกน', 'No ticket available to scan'],
+  ['ไม่พบตั๋ว', 'No tickets found'],
+  ['ยืนยันการแลกรับ Token', 'Confirm Token redemption'],
+  ['ยืนยันการแลกรับ', 'Confirm redemption'],
+  ['รับ Token สำหรับตั๋วนี้?', 'Redeem a Token for this ticket?'],
+  ['รหัสตั๋ว', 'Ticket code'],
+  ['ค่าโดยสาร', 'Fare'],
+  ['ยืนยันรับ Token', 'Confirm Token'],
+  ['ยกเลิก', 'Cancel'],
+  ['จองตั๋ว', 'Book ticket'],
+  ['พร้อมออกเดินทาง', 'Ready to travel'],
+  ['สรุปค่าใช้จ่าย', 'Payment summary'],
+  ['ค่าบริการ', 'Service fee'],
+  ['ยอดชำระ', 'Total'],
+  ['เลือกช่องทางชำระเงิน', 'Select payment method'],
+  ['ชำระผ่านแอปธนาคารหรือ QR PromptPay', 'Pay with a banking app or PromptPay QR'],
+  ['ยอดคงเหลือ', 'Available balance'],
+  ['ยืนยันและชำระ', 'Confirm and pay'],
+  ['พร้อมรับ Token', 'Token ready'],
+  ['ปลอดภัยกว่า QR แบบเดิม', 'Safer than a regular QR code'],
+  ['ไปที่ Express Machine', 'Go to Express Machine'],
+  ['รับ Token แบบด่วน', 'Express Token pickup'],
+  ['สแกน QR จากหน้าตู้', 'Scan the machine QR'],
+  ['เดินทางได้เลย', 'Ready to go'],
+  ['คิวของคุณ', 'Your queue'],
+  ['อีก 2 คิวจะถึงคุณ', '2 queues ahead of you'],
+  ['เวลารอประมาณ 2 นาที', 'Estimated wait: 2 minutes'],
+  ['กำลังตรวจสอบ QR จากตู้...', 'Verifying the machine QR...'],
+  ['รับ Token สำเร็จ', 'Token received'],
+  ['ตู้ BL21 จ่าย Token แล้ว', 'Machine BL21 has dispensed your Token'],
+  ['ประตูทางเข้าอยู่ทางขวามือ', 'The entrance gate is on your right'],
+  ['จำลอง: ถึงคิวแล้ว', 'Simulate: My turn'],
+  ['สแกน QR เพื่อรับ Token', 'Scan QR to receive Token'],
+  ['แลกรับ Token เรียบร้อย', 'Token redeemed'],
+  ['ยอดเงินพร้อมใช้', 'Available balance'],
+  ['อัปเดตเมื่อสักครู่', 'Updated just now'],
+  ['รายการล่าสุด', 'Recent activity'],
+  ['ยื่นคำขอคืนเงินจริง', 'Request a refund'],
+  ['เติม Cash Balance', 'Add Cash Balance'],
+  ['คืนเงินตั๋วหมดอายุ', 'Expired ticket refund'],
+  ['วันนี้', 'Today'],
+  ['เดินทางง่ายขึ้น', 'Travel made easier'],
+  ['เริ่มต้นได้ที่นี่', 'Start right here'],
+  ['เข้าสู่ Simulate App', 'Enter Simulate App'],
+  ['แผนที่ Interactive', 'Interactive map'],
+  ['วางแผนเส้นทาง', 'Plan your route'],
+  ['เลือกสถานีที่ต้องการเดินทาง', 'Choose the stations for your journey'],
+  ['จอง Token', 'Book a Token'],
+  ['รับ Token ได้ง่ายและรวดเร็ว', 'Pick up your Token quickly and easily'],
+  ['ติดตามเส้นทางสายสีน้ำเงิน', 'Explore the Blue Line route'],
+  ['พร้อมเดินทางไปกับคุณ', 'Ready to travel with you'],
+  ['สายสีน้ำเงิน', 'Blue Line'],
+  ['สายสีม่วง', 'Purple Line'],
+  ['ต้นทาง', 'Origin'],
+  ['ปลายทาง', 'Destination'],
+  ['ประมาณ', 'Approx.'],
+  ['นาทีโดยประมาณ', 'minutes estimated'],
+  ['นาที', 'minutes'],
+  ['สถานี', 'stations'],
+  ['รายการ', 'items'],
+  ['เลือกสถานี', 'Select station'],
+  ['เปิดแผนที่', 'Open map'],
+  ['เปิดโปรไฟล์', 'Open profile'],
+  ['การตั้งค่า', 'Settings'],
+  ['ธีม', 'Theme'],
+  ['ภาษาไทย', 'Thai'],
+  ['ภาษา', 'Language'],
+  ['ชำระเงินสำเร็จ — พร้อมรับ Token', 'Payment successful — Token ready'],
+  ['เริ่มใหม่', 'Reset'],
+  ['เลือก ', 'Select '],
+  ['จาก', 'From'],
+  ['ถึง', 'To'],
+];
+
+const localizedTextOriginals = new WeakMap<Text, string>();
+const localizedAttributeOriginals = new WeakMap<Element, Map<string, string>>();
+const localizableAttributes = ['aria-label', 'placeholder', 'title'];
+
+function translateAppText(value: string) {
+  let translated = value;
+  for (const station of [...metroStations].sort((a, b) => b.nameTh.length - a.nameTh.length)) translated = translated.replaceAll(station.nameTh, station.nameEn);
+  for (const [thai, english] of [...thaiEnglishPhrases].sort((a, b) => b[0].length - a[0].length)) translated = translated.replaceAll(thai, english);
+  return translated;
+}
+
+function localizeAppTree(language: Language) {
+  const root = document.body;
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  let node = walker.nextNode() as Text | null;
+  while (node) {
+    const current = node.nodeValue ?? '';
+    if (language === 'en') {
+      const storedOriginal = localizedTextOriginals.get(node);
+      if (/[฀-๿]/.test(current) || storedOriginal === undefined || current !== translateAppText(storedOriginal)) localizedTextOriginals.set(node, current);
+      const translated = translateAppText(localizedTextOriginals.get(node) ?? current);
+      if (translated !== current) node.nodeValue = translated;
+    } else {
+      const original = localizedTextOriginals.get(node);
+      if (/[฀-๿]/.test(current)) localizedTextOriginals.set(node, current);
+      else if (original !== undefined && /[฀-๿]/.test(original) && original !== current) node.nodeValue = original;
+    }
+    node = walker.nextNode() as Text | null;
+  }
+  root.querySelectorAll('*').forEach(element => {
+    let originals = localizedAttributeOriginals.get(element);
+    if (!originals) { originals = new Map(); localizedAttributeOriginals.set(element, originals); }
+    localizableAttributes.forEach(attribute => {
+      const current = element.getAttribute(attribute);
+      if (current === null) return;
+      if (language === 'en') {
+        const storedOriginal = originals!.get(attribute);
+        if (/[฀-๿]/.test(current) || storedOriginal === undefined || current !== translateAppText(storedOriginal)) originals!.set(attribute, current);
+        const translated = translateAppText(originals!.get(attribute) ?? current);
+        if (translated !== current) element.setAttribute(attribute, translated);
+      } else {
+        const original = originals!.get(attribute);
+        if (/[฀-๿]/.test(current)) originals!.set(attribute, current);
+        else if (original !== undefined && /[฀-๿]/.test(original) && original !== current) element.setAttribute(attribute, original);
+      }
+    });
+  });
+}
+
 // MRT adult fare (บาท): 17–44 บาท, capped at 44 บาท from 13 stations onward.
-// Source: mrta-fare-cal.md / BEM Fare Calculation.
+// Source: https://www.mrta.co.th/storage/content/uploads/17830468128.png
 const adultFareByStationCount: Record<number, number> = {
-  1: 17, 2: 19, 3: 21, 4: 24, 5: 26, 6: 28, 7: 31, 8: 33, 9: 35,
-  10: 37, 11: 40, 12: 42, 13: 44, 14: 44, 15: 44, 16: 44, 17: 44,
-  18: 44, 19: 44,
+  1: 17, 2: 20, 3: 22, 4: 24, 5: 25, 6: 27, 7: 29,
+  8: 32, 9: 34, 10: 37, 11: 39, 12: 42, 13: 44,
 };
 
+// Purple Line promotion: 14–20 baht. A cross-line journey pays the entry fare once.
 const purpleAdultFareByStationCount: Record<number, number> = {
-  0: 0, 1: 17, 2: 19, 3: 21, 4: 24, 5: 26, 6: 28, 7: 31, 8: 35,
-  9: 37, 10: 38, 11: 40, 12: 42, 13: 42, 14: 42, 15: 42,
+  1: 14, 2: 17, 3: 20,
 };
 
 function createLineGraph(stations: typeof blueLineStations) {
@@ -113,12 +306,12 @@ function calculateJourney(origin: string, destination: string): Journey {
     return { codes: originStation ? [originStation.code] : [], stationCount: 0, fare: 0 };
   }
   const codes = findShortestRoute(originStation.code, destinationStation.code);
-  const stationCount = Math.max(0, codes.length - 1);
-  const blueSegments = codes.filter(code => code.startsWith('BL')).length - 1;
-  const purpleSegments = codes.filter(code => code.startsWith('PP')).length - 1;
-  const blueFare = blueSegments > 0 ? adultFareByStationCount[blueSegments] ?? 44 : 0;
-  const purpleFare = purpleSegments > 0 ? purpleAdultFareByStationCount[purpleSegments] ?? 42 : 0;
-  const fare = blueFare && purpleFare ? blueFare + purpleFare - 17 : blueFare || purpleFare;
+  const blueSegments = codes.slice(1).filter((code, index) => code.startsWith('BL') && codes[index].startsWith('BL')).length;
+  const purpleSegments = codes.slice(1).filter((code, index) => code.startsWith('PP') && codes[index].startsWith('PP')).length;
+  const stationCount = blueSegments + purpleSegments;
+  const blueFare = blueSegments ? adultFareByStationCount[Math.min(blueSegments, 13)] : 0;
+  const purpleFare = purpleSegments ? purpleAdultFareByStationCount[Math.min(purpleSegments, 3)] : 0;
+  const fare = blueFare && purpleFare ? blueFare + purpleFare - 14 : blueFare || purpleFare;
   return { codes, stationCount, fare };
 }
 
@@ -131,19 +324,14 @@ function BellIcon() {
   return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" /></svg>;
 }
 
-function Header({ go }: { go: Go }) {
+function Header({ go, language, setLanguage }: { go: Go; language: Language; setLanguage: (language: Language) => void }) {
   const [profileOpen, setProfileOpen] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>(() => localStorage.getItem('tokengo-theme') === 'dark' ? 'dark' : 'light');
-  const [language, setLanguage] = useState<'th' | 'en'>(() => localStorage.getItem('tokengo-language') === 'en' ? 'en' : 'th');
   const openView = (view: View) => { setProfileOpen(false); go(view); };
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
     localStorage.setItem('tokengo-theme', theme);
   }, [theme]);
-  useEffect(() => {
-    document.documentElement.lang = language;
-    localStorage.setItem('tokengo-language', language);
-  }, [language]);
   const isThai = language === 'th';
   return <header className="topbar">
     <button className="brand plain" onClick={() => go('home')}><span className="brand-mark">M</span><span>Token<span>Go</span></span></button>
@@ -200,11 +388,7 @@ function StationSelect({ id, label, value, onChange }: { id: string; label: stri
 function Home({ go }: HomeProps) {
   const [activeSlide, setActiveSlide] = useState(0);
   const [isHomeScrolled, setIsHomeScrolled] = useState(false);
-  const slides = [
-    { kicker: 'SMART TOKEN', title: 'จองล่วงหน้า\nเดินทางได้ไวขึ้น', detail: 'เลือกต้นทางและปลายทางได้ง่ายในไม่กี่ขั้นตอน' },
-    { kicker: 'MRT BLUE LINE', title: 'ทุกสถานี\nอยู่ใกล้แค่ปลายนิ้ว', detail: 'เปิดดูแผนที่และวางเส้นทางก่อนออกเดินทาง' },
-    { kicker: 'TOKEN GO', title: 'พร้อมรับ Token\nเมื่อถึงสถานี', detail: 'ติดตามตั๋วและสถานะการรับ Token ได้ตลอดเวลา' },
-  ];
+  const slides = ['Test1', 'Test2', 'Test3'];
   useEffect(() => {
     const timer = window.setInterval(() => setActiveSlide(current => (current + 1) % slides.length), 4500);
     return () => window.clearInterval(timer);
@@ -222,16 +406,13 @@ function Home({ go }: HomeProps) {
     <section className="home-slideshow" aria-label="ข่าวสารและบริการ">
       <div className="home-slides" aria-live="polite">
         <div className="home-slide-track" style={{ transform: `translateX(-${activeSlide * 100}%)` }}>
-          {slides.map((slide, index) => <article className={`home-slide home-slide-${index + 1} ${activeSlide === index ? 'active' : ''}`} aria-hidden={activeSlide !== index} key={slide.kicker}>
-            <span>{slide.kicker}</span>
-            <h1>{slide.title.split('\n').map((line, lineIndex) => <span key={line}>{line}{lineIndex === 0 && <br/>}</span>)}</h1>
-            <p>{slide.detail}</p>
-            <i className="slide-route" aria-hidden="true"><b/><b/><b/></i>
+          {slides.map((slide, index) => <article className={`home-slide home-slide-${index + 1} ${activeSlide === index ? 'active' : ''}`} aria-hidden={activeSlide !== index} key={slide}>
+            <h1 className="home-slide-placeholder">{slide}</h1>
           </article>)}
         </div>
       </div>
       <div className="home-slide-dots" role="group" aria-label="เลือกสไลด์">
-        {slides.map((slide, index) => <button type="button" className={activeSlide === index ? 'active' : ''} onClick={() => setActiveSlide(index)} aria-label={`สไลด์ ${index + 1}: ${slide.kicker}`} aria-pressed={activeSlide === index} key={slide.kicker}/>) }
+        {slides.map((slide, index) => <button type="button" className={activeSlide === index ? 'active' : ''} onClick={() => setActiveSlide(index)} aria-label={`สไลด์ ${index + 1}: ${slide}`} aria-pressed={activeSlide === index} key={slide}/>) }
       </div>
     </section>
     <article className="balance-card"><div><span>Cash Balance</span><strong>฿124.00</strong></div><button onClick={() => go('wallet')}>ดูรายการ <span>→</span></button><div className="card-orbit" /></article>
@@ -753,15 +934,35 @@ function Nav({ view, go }: { view: View; go: Go }) {
   return <nav className="bottom-nav">{tabs.map(([id,icon,label]) => <button key={id} className={`${view === id ? 'nav-active ' : ''}${id === 'booking' ? 'scan-nav' : ''}`} onClick={() => go(id)}><span><Icon name={icon} /></span>{label}</button>)}</nav>;
 }
 
-function WelcomePage({ onSimulate, onInteractiveMap }: { onSimulate: () => void; onInteractiveMap: () => void }) {
-  return <main className="welcome-page"><div className="welcome-glow welcome-glow-a"/><div className="welcome-glow welcome-glow-b"/><section className="welcome-shell"><header className="welcome-header"><div className="welcome-brand"><span className="welcome-mark">M</span><span>MRT<span> - TokenGo</span></span></div><span className="welcome-status"><i/> Blue Line</span></header><div className="welcome-hero"><span className="welcome-kicker">SMART TRANSIT TOKEN</span><h1>เดินทางง่ายขึ้น<br/><em>เริ่มต้นได้ที่นี่</em></h1><p>วางแผนเส้นทาง จอง Token และติดตามการเดินทางของคุณในที่เดียว</p><div className="welcome-actions"><button className="welcome-cta" onClick={onSimulate}>เข้าสู่ Simulate App <span>→</span></button><button className="welcome-map-cta" onClick={onInteractiveMap}><Icon name="map"/> แผนที่ Interactive</button></div></div><div className="welcome-orbit"><div className="welcome-orbit-inner"><span>BL</span><strong>01</strong></div><i className="orbit-dot orbit-dot-a"/><i className="orbit-dot orbit-dot-b"/></div><div className="welcome-features"><article><span><Icon name="map"/></span><b>วางแผนเส้นทาง</b><small>เลือกสถานีที่ต้องการเดินทาง</small></article><article><span><Icon name="plus"/></span><b>จอง Token</b><small>รับ Token ได้ง่ายและรวดเร็ว</small></article><article><span><Icon name="scan"/></span><b>ดูแผนที่</b><small>ติดตามเส้นทางสายสีน้ำเงิน</small></article></div><footer className="welcome-footer"><span>พร้อมเดินทางไปกับคุณ</span><span>v1.0 · MRT Bangkok</span></footer></section></main>;
+function WelcomePage({ onSimulate, onInteractiveMap, language, setLanguage }: { onSimulate: () => void; onInteractiveMap: () => void; language: Language; setLanguage: (language: Language) => void }) {
+  return <main className="welcome-page"><div className="welcome-glow welcome-glow-a"/><div className="welcome-glow welcome-glow-b"/><section className="welcome-shell"><header className="welcome-header"><div className="welcome-brand"><span className="welcome-mark">M</span><span>MRT<span> - TokenGo</span></span></div><div className="welcome-header-actions"><span className="welcome-status"><i/> Blue Line</span><div className="welcome-language-switch" role="group" aria-label="ภาษา"><button type="button" className={language === 'th' ? 'active' : ''} onClick={() => setLanguage('th')} aria-pressed={language === 'th'}>TH</button><button type="button" className={language === 'en' ? 'active' : ''} onClick={() => setLanguage('en')} aria-pressed={language === 'en'}>EN</button></div></div></header><div className="welcome-hero"><span className="welcome-kicker">SMART TRANSIT TOKEN</span><h1>เดินทางง่ายขึ้น<br/><em>เริ่มต้นได้ที่นี่</em></h1><p>วางแผนเส้นทาง จอง Token และติดตามการเดินทางของคุณในที่เดียว</p><div className="welcome-actions"><button className="welcome-cta" onClick={onSimulate}>เข้าสู่ Simulate App <span>→</span></button><button className="welcome-map-cta" onClick={onInteractiveMap}><Icon name="map"/> แผนที่ Interactive</button></div></div><div className="welcome-orbit"><div className="welcome-orbit-inner"><span>BL</span><strong>01</strong></div><i className="orbit-dot orbit-dot-a"/><i className="orbit-dot orbit-dot-b"/></div><div className="welcome-features"><article><span><Icon name="map"/></span><b>วางแผนเส้นทาง</b><small>เลือกสถานีที่ต้องการเดินทาง</small></article><article><span><Icon name="plus"/></span><b>จอง Token</b><small>รับ Token ได้ง่ายและรวดเร็ว</small></article><article><span><Icon name="scan"/></span><b>ดูแผนที่</b><small>ติดตามเส้นทางสายสีน้ำเงิน</small></article></div><footer className="welcome-footer"><span>พร้อมเดินทางไปกับคุณ</span><span>v1.0 · MRT Bangkok</span></footer></section></main>;
 }
 
 export default function App() {
   const [screen, setScreen] = useState<'welcome' | 'simulate' | 'interactive-map'>('welcome');
-  if (screen === 'simulate') return <SimulateApp onWelcome={() => setScreen('welcome')}/>;
+  const [language, setLanguage] = useState<Language>('th');
+  useEffect(() => {
+    document.body.classList.toggle('simulate-screen', screen === 'simulate');
+    return () => document.body.classList.remove('simulate-screen');
+  }, [screen]);
+  useEffect(() => {
+    document.documentElement.lang = language;
+    localStorage.setItem('tokengo-language', language);
+    let applying = false;
+    const applyLanguage = () => {
+      if (applying) return;
+      applying = true;
+      localizeAppTree(language);
+      applying = false;
+    };
+    applyLanguage();
+    const observer = new MutationObserver(() => queueMicrotask(applyLanguage));
+    observer.observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: localizableAttributes });
+    return () => observer.disconnect();
+  }, [language, screen]);
+  if (screen === 'simulate') return <SimulateApp onWelcome={() => setScreen('welcome')} language={language} setLanguage={setLanguage}/>;
   if (screen === 'interactive-map') return <InteractiveMapPage onBack={() => setScreen('welcome')}/>;
-  return <WelcomePage onSimulate={() => setScreen('simulate')} onInteractiveMap={() => setScreen('interactive-map')}/>;
+  return <WelcomePage onSimulate={() => setScreen('simulate')} onInteractiveMap={() => setScreen('interactive-map')} language={language} setLanguage={setLanguage}/>;
 }
 
 const blueMapHotspots = [
@@ -821,24 +1022,37 @@ function InteractiveMapPage({ onBack }: { onBack: () => void }) {
   return <main className="interactive-map-page"><header className="interactive-map-header"><button className="map-back" onClick={onBack}>← กลับ Welcome</button><div><span>INTERACTIVE MRT MAP</span><h1>เลือกสถานีบนแผนที่</h1></div><button className="map-reset" onClick={() => { setOriginCode(null); setDestinationCode(null); }}>เริ่มใหม่</button></header><section className="interactive-map-layout"><div className="interactive-map-canvas"><div className="official-map-stage" onClick={coordinateDebug ? readMapCoordinate : undefined} onContextMenu={event => event.preventDefault()}><img className="official-mrt-map" src={publicAsset('maps/mrt-network-map.jpg')} alt="แผนที่รถไฟฟ้า MRT จาก BEM" draggable={false}/>{routePoints.length > 1 && <svg className="map-route-link" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><polyline points={routePoints.map(point => `${point.x},${point.y}`).join(' ')}/></svg>}{coordinateDebug && mapCoordinate && <span className="map-coordinate" style={{ left: `${mapCoordinate.x}%`, top: `${mapCoordinate.y}%` }}>x: {mapCoordinate.x}, y: {mapCoordinate.y}</span>}{metroStations.filter(station => station.code !== 'BL10').map(station => { const point = officialMapHotspots[station.code]; const isTaoPoon = station.code === 'PP16'; return point && <button key={station.code} className={`map-hotspot ${station.code.startsWith('BL') ? 'blue' : 'purple'} ${station.code === originCode ? 'origin' : ''} ${station.code === destinationCode ? 'destination' : ''}`} style={{ left: `${point.x}%`, top: `${point.y}%` }} onClick={event => { event.stopPropagation(); selectStation(station.code); }} aria-label={`เลือก ${station.nameTh} ${isTaoPoon ? 'BL10 / PP16' : station.code}`}><span><b>{isTaoPoon ? 'BL10 / PP16' : station.code}</b>{station.nameTh}</span></button>; })}</div><div className="map-legend"><span><i className="blue"/>สายสีน้ำเงิน</span><span><i className="purple"/>สายสีม่วง</span><span>กดจุดบนแผนที่เพื่อเลือกสถานี</span></div>{coordinateDebug && <div className="map-coordinate-help">เปิดตัวอ่านพิกัดแล้ว — คลิกบนแผนที่เพื่ออ่าน x, y</div>}<div className="map-station-picker">{metroStations.filter(station => station.code !== 'BL10').map(station => <button key={station.code} className={`${station.code.startsWith('BL') ? 'blue' : 'purple'} ${station.code === originCode ? 'origin' : ''} ${station.code === destinationCode ? 'destination' : ''}`} onClick={() => selectStation(station.code)}><b>{station.code === 'PP16' ? 'BL10 / PP16' : station.code}</b><span>{station.nameTh}</span></button>)}</div></div><aside className="interactive-map-info"><span className="map-info-kicker">ROUTE SELECTION</span>{pendingStation && <div className="station-action-modal" role="dialog" aria-modal="true" aria-label="เลือกการใช้งานสถานี"><section><span>เลือกสถานี</span><h2>{pendingStation.nameTh}</h2><p>{pendingStation.code}</p><div><button type="button" className="primary" onClick={chooseOrigin}>เลือกเป็นต้นทาง</button><button type="button" className="secondary" onClick={chooseDestination} disabled={pendingStation.code === originCode}>เลือกเป็นปลายทาง</button><button type="button" className="modal-back" onClick={() => setPendingStationCode(null)}>← ย้อนกลับ</button></div></section></div>}<div className="map-selection"><small>ต้นทาง</small><b>{origin ? `${origin.nameTh} (${origin.code})` : 'กดเลือกสถานีแรก'}</b></div><div className="map-selection"><small>ปลายทาง</small><b>{destination ? `${destination.nameTh} (${destination.code})` : 'กดเลือกสถานีที่สอง'}</b></div>{journey && <div className="map-result"><span>{journey.stationCount} สถานี</span><span>{Math.max(1, journey.stationCount * 3)} นาทีโดยประมาณ</span><strong>฿{journey.fare}</strong></div>}<p>กดจุดสถานีบนแผนที่ครั้งแรกเพื่อตั้งต้นทาง และครั้งที่สองเพื่อตั้งปลายทาง ระบบจะคำนวณราคาให้ทันที</p><section className="map-debug-tool"><div><span>DEBUG TOOL</span><b>Coordinate reader</b></div><button type="button" className={coordinateDebug ? 'enabled' : ''} onClick={() => { setCoordinateDebug(current => !current); setMapCoordinate(null); }} aria-pressed={coordinateDebug}>{coordinateDebug ? 'ON' : 'OFF'}</button><small>{coordinateDebug ? 'คลิกบนแผนที่เพื่ออ่านพิกัด' : 'ปิดอยู่ — เปิดเมื่อต้องการปรับหมุด'}</small></section></aside></section></main>;
 }
 
-function DebugPanel({ view, route, go, setOrigin, setDestination, showToast, reset }: { view: View; route: Route; go: Go; setOrigin: (value: string) => void; setDestination: (value: string) => void; showToast: () => void; reset: () => void }) {
+function DebugPanel({ view, route, navigate, setOrigin, setDestination, showToast, reset, seedTicket }: { view: View; route: Route; navigate: (view: View) => void; setOrigin: (value: string) => void; setDestination: (value: string) => void; showToast: () => void; reset: () => void; seedTicket: (status: BookedTicket['status']) => void }) {
+  const [open, setOpen] = useState(false);
+  const navigation: [View, string][] = [['home', 'Home'], ['booking', 'Tickets'], ['planner', 'Planner'], ['checkout', 'Checkout'], ['map', 'Map'], ['machine', 'Scanner'], ['wallet', 'Wallet']];
+  const routePresets = [
+    { label: 'One station', detail: 'BL21 → BL22', origin: 20, destination: 21 },
+    { label: 'Blue loop', detail: 'BL01 → BL38', origin: 0, destination: 37 },
+    { label: 'Purple line', detail: 'PP01 → PP16', origin: 38, destination: 53 },
+    { label: 'Cross line', detail: 'PP01 → BL21', origin: 38, destination: 20 },
+  ];
   const setRoute = (originIndex: number, destinationIndex: number, nextView: View = 'planner') => {
+    navigate(nextView);
     setOrigin(metroStations[originIndex].nameTh);
     setDestination(metroStations[destinationIndex].nameTh);
-    go(nextView);
   };
 
-  return <aside className="debug-panel" aria-label="Developer debug controls">
-    <div className="debug-panel-head"><span>DEBUG</span><i>DEV</i></div>
-    <p>View: <b>{view}</b></p>
-    <p className="debug-route">{route.origin} <span>→</span> {route.destination}</p>
-    <div className="debug-group"><small>Navigate</small><div className="debug-grid"><button onClick={() => go('home')}>Home</button><button onClick={() => go('booking')}>Tickets</button><button onClick={() => go('planner')}>Booking</button><button onClick={() => go('checkout')}>Checkout</button><button onClick={() => go('map')}>Map</button><button onClick={() => go('machine')}>QR Scanner</button><button onClick={() => go('wallet')}>Wallet</button></div></div>
-    <div className="debug-group"><small>Test route</small><button className="debug-action" onClick={() => setRoute(20, 21)}>Short route · BL21 → BL22</button><button className="debug-action" onClick={() => setRoute(0, 37)}>Full line · BL01 → BL38</button><button className="debug-action" onClick={() => setRoute(38, 9)}>Purple → Blue · PP01 → BL10</button></div>
-    <div className="debug-group"><small>Actions</small><button className="debug-action" onClick={showToast}>Show payment toast</button><button className="debug-reset" onClick={reset}>Reset simulation</button></div>
-  </aside>;
+  const clearRoute = () => { setOrigin(''); setDestination(''); navigate('planner'); };
+  return <>
+    <button type="button" className={`debug-fab ${open ? 'active' : ''}`} onClick={() => setOpen(current => !current)} aria-expanded={open} aria-controls="debug-panel"><span>DEV</span><i>{open ? '×' : '⌘'}</i></button>
+    <aside id="debug-panel" className={`debug-panel ${open ? 'open' : ''}`} aria-label="Developer debug controls" aria-hidden={!open}>
+      <div className="debug-panel-head"><div><span>DEBUG CONSOLE</span><small>Simulation tools</small></div><button type="button" onClick={() => setOpen(false)} aria-label="Close debug console">×</button></div>
+      <div className="debug-status"><div><small>VIEW</small><b>{view}</b></div><div><small>STATIONS</small><b>{route.stationCount ?? 0}</b></div><div><small>FARE</small><b>฿{route.fare ?? 0}</b></div></div>
+      <div className="debug-current-route"><small>CURRENT ROUTE</small><p>{route.origin || 'No origin'} <span>→</span> {route.destination || 'No destination'}</p></div>
+      <div className="debug-group"><small>Navigate</small><div className="debug-nav-grid">{navigation.map(([id, label]) => <button type="button" className={view === id ? 'active' : ''} onClick={() => navigate(id)} key={id}>{label}</button>)}</div></div>
+      <div className="debug-group"><small>Route presets</small><div className="debug-preset-list">{routePresets.map(preset => <button type="button" onClick={() => setRoute(preset.origin, preset.destination)} key={preset.detail}><span>{preset.label}</span><b>{preset.detail}</b></button>)}</div><button type="button" className="debug-clear" onClick={clearRoute}>Clear selected route</button></div>
+      <div className="debug-group"><small>Ticket states</small><div className="debug-ticket-grid"><button type="button" onClick={() => seedTicket('unpaid')}><span>＋</span> Unpaid</button><button type="button" onClick={() => seedTicket('ready')}><span>✓</span> Ready</button><button type="button" onClick={() => seedTicket('completed')}><span>●</span> Completed</button></div></div>
+      <div className="debug-group"><small>System actions</small><div className="debug-system-actions"><button type="button" onClick={showToast}>Show payment toast</button><button type="button" className="debug-reset" onClick={reset}>Reset simulation</button></div></div>
+    </aside>
+  </>;
 }
 
-function SimulateApp({ onWelcome }: { onWelcome: () => void }) {
+function SimulateApp({ onWelcome, language, setLanguage }: { onWelcome: () => void; language: Language; setLanguage: (language: Language) => void }) {
   const [view, setView] = useState<View>('home');
   const navigationHistory = useRef<View[]>([]);
   const [mapReturnView, setMapReturnView] = useState<View>('home');
@@ -865,6 +1079,11 @@ function SimulateApp({ onWelcome }: { onWelcome: () => void }) {
   };
   const replaceView = (id: View) => {
     if (navigationHistory.current.at(-1) === id) navigationHistory.current.pop();
+    setView(id);
+    scrollToTop();
+  };
+  const debugNavigate = (id: View) => {
+    navigationHistory.current = [];
     setView(id);
     scrollToTop();
   };
@@ -911,7 +1130,7 @@ function SimulateApp({ onWelcome }: { onWelcome: () => void }) {
     appendWalletLog({
       id: `${activeTicket.id}-${Date.now()}`,
       title: `จอง Token · ${activeTicket.origin} → ${activeTicket.destination}`,
-      meta: `${activeTicket.code} · ${new Date().toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' })}`,
+      meta: `${activeTicket.code} · ${new Date().toLocaleString(language === 'th' ? 'th-TH' : 'en-GB', { dateStyle: 'short', timeStyle: 'short' })}`,
       amount: activeTicket.fare ?? calculateJourney(activeTicket.origin, activeTicket.destination).fare,
     });
     setBookedTickets(current => current.map(ticket => ticket.id === activeTicket.id ? { ...ticket, status: 'ready' } : ticket));
@@ -920,7 +1139,26 @@ function SimulateApp({ onWelcome }: { onWelcome: () => void }) {
     setTimeout(() => setToast(false), 2200);
     setTimeout(() => replaceView('booking'), 350);
   };
+  const seedDebugTicket = (status: BookedTicket['status']) => {
+    const debugOrigin = origin || blueLineStations[20].nameTh;
+    const debugDestination = destination || blueLineStations[21].nameTh;
+    const debugJourney = calculateJourney(debugOrigin, debugDestination);
+    const ticket: BookedTicket = {
+      origin: debugOrigin,
+      destination: debugDestination,
+      stationCount: debugJourney.stationCount,
+      fare: debugJourney.fare,
+      id: Date.now(),
+      code: String(Math.floor(100000 + Math.random() * 900000)),
+      status,
+    };
+    setOrigin(debugOrigin);
+    setDestination(debugDestination);
+    setBookedTickets(current => [ticket, ...current]);
+    setActiveTicket(ticket);
+    go('booking');
+  };
   const showDebugToast = () => { setToast(true); setTimeout(() => setToast(false), 2200); };
   const reset = () => { navigationHistory.current = []; localStorage.removeItem(walletLogStorageKey); setOrigin(''); setDestination(''); setBookedTickets([]); setActiveTicket(null); setToast(false); replaceView('home'); };
-  return <><button className="welcome-return" onClick={onWelcome}>← Welcome</button><div className="ambient ambient-a"/><div className="ambient ambient-b"/><main className={`shell ${view === 'home' ? 'home-shell' : ''}`}><Header go={go}/><section key={view} className={`view active ${view !== 'home' ? 'subview' : ''}`}>{view === 'home' && <Home go={go} bookToken={bookToken} origin={origin} setOrigin={setOrigin} destination={destination} setDestination={setDestination}/>} {view === 'checkout' && <Checkout go={go} route={activeTicket ?? route} pay={pay}/>} {view === 'booking' && <MyTickets go={go} tickets={bookedTickets} payTicket={payTicket} useTicket={useTicket}/>} {view === 'planner' && <BookingPlanner go={go} bookToken={bookToken} origin={origin} setOrigin={setOrigin} destination={destination} setDestination={setDestination}/>} {view === 'map' && <MapView go={go} backView={mapReturnView} origin={origin} setOrigin={setOrigin} destination={destination} setDestination={setDestination}/>} {view === 'machine' && <TokenScanner go={go} ticket={activeTicket} onComplete={completeTicket}/>} {view === 'wallet' && <Wallet go={go}/>}</section><Nav view={view} go={go}/></main><DebugPanel view={view} route={route} go={go} setOrigin={setOrigin} setDestination={setDestination} showToast={showDebugToast} reset={reset}/><div className={`toast ${toast ? 'show' : ''}`}>ชำระเงินสำเร็จ — พร้อมรับ Token</div></>;
+  return <><button className="welcome-return" onClick={onWelcome}>← Welcome</button><div className="ambient ambient-a"/><div className="ambient ambient-b"/><main className={`shell ${view === 'home' ? 'home-shell' : ''}`}><Header go={go} language={language} setLanguage={setLanguage}/><section key={view} className={`view active ${view !== 'home' ? 'subview' : ''}`}>{view === 'home' && <Home go={go} bookToken={bookToken} origin={origin} setOrigin={setOrigin} destination={destination} setDestination={setDestination}/>} {view === 'checkout' && <Checkout go={go} route={activeTicket ?? route} pay={pay}/>} {view === 'booking' && <MyTickets go={go} tickets={bookedTickets} payTicket={payTicket} useTicket={useTicket}/>} {view === 'planner' && <BookingPlanner go={go} bookToken={bookToken} origin={origin} setOrigin={setOrigin} destination={destination} setDestination={setDestination}/>} {view === 'map' && <MapView go={go} backView={mapReturnView} origin={origin} setOrigin={setOrigin} destination={destination} setDestination={setDestination}/>} {view === 'machine' && <TokenScanner go={go} ticket={activeTicket} onComplete={completeTicket}/>} {view === 'wallet' && <Wallet go={go}/>}</section><Nav view={view} go={go}/></main><DebugPanel view={view} route={route} navigate={debugNavigate} setOrigin={setOrigin} setDestination={setDestination} showToast={showDebugToast} reset={reset} seedTicket={seedDebugTicket}/><div className={`toast ${toast ? 'show' : ''}`}>ชำระเงินสำเร็จ — พร้อมรับ Token</div></>;
 }
