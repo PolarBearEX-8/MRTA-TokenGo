@@ -953,20 +953,29 @@ body.simulate-screen .shell { box-shadow: none; }
 
 /* Welcome — editorial top hero with a split lower section */
 .welcome-page {
-  padding: 20px;
-  background: #e8e5df;
+  padding: 0;
+  background: #faf9f4;
 }
 .welcome-shell {
-  width: min(100%, 1080px);
-  min-height: calc(100dvh - 40px);
-  grid-template-columns: .85fr 1.15fr;
-  grid-template-rows: auto auto 1fr auto;
-  gap: 14px 34px;
-  padding: 25px 34px 22px;
-  border: 1px solid #e2dfd7;
-  border-radius: 32px;
+  width: 100%;
+  min-height: 100dvh;
+  grid-template-columns: minmax(0, 1.02fr) minmax(0, .98fr);
+  grid-template-rows: auto 1fr auto;
+  gap: 14px clamp(24px, 3vw, 48px);
+  padding: 25px clamp(22px, 4vw, 60px) 22px;
+  border: 0;
+  border-radius: 0;
   background: #faf9f4;
   box-shadow: none;
+}
+.welcome-main {
+  grid-column: 1;
+  grid-row: 2;
+  display: grid;
+  align-content: center;
+  justify-items: start;
+  gap: clamp(26px, 4vh, 44px);
+  padding: 20px 0;
 }
 .welcome-header { grid-column: 1 / -1; }
 .welcome-header-actions { display: flex; align-items: center; gap: 12px; }
@@ -994,14 +1003,11 @@ body.simulate-screen .shell { box-shadow: none; }
   color: var(--mint);
   box-shadow: 0 3px 8px #10231e1f;
 }
+/* Spacing between the hero and the action cards is owned by .welcome-main's gap. */
 .welcome-hero {
-  grid-column: 1 / -1;
-  grid-row: 2;
-  justify-self: center;
-  align-self: start;
-  max-width: 780px;
-  padding: 24px 0 10px;
-  text-align: center;
+  max-width: 620px;
+  padding: 0;
+  text-align: left;
 }
 .welcome-hero h1 {
   margin: 11px 0 12px;
@@ -1009,59 +1015,102 @@ body.simulate-screen .shell { box-shadow: none; }
   line-height: 1.04;
   letter-spacing: -2.4px;
 }
-.welcome-hero p { max-width: 560px; margin: 0 auto 20px; font-size: 13px; line-height: 1.65; }
-.welcome-actions { justify-content: center; }
-.welcome-orbit {
-  grid-column: 1;
-  grid-row: 3;
-  align-self: center;
-  justify-self: center;
-  width: min(100%, 290px);
-  background: #eef1eaaa;
+.welcome-hero p { max-width: 520px; margin: 0; font-size: 13px; line-height: 1.65; }
+.welcome-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  width: min(100%, 620px);
 }
-.welcome-features {
+/* The stage owns the canvas; the caption sits outside it so WebGL never repaints over text. */
+.welcome-showcase {
+  position: relative;
   grid-column: 2;
-  grid-row: 3;
-  align-self: center;
-  grid-template-columns: 1fr;
-  gap: 9px;
+  grid-row: 2;
+  display: grid;
+  place-items: center;
+  min-height: min(56vh, 460px);
+  border-radius: 26px;
+  background: radial-gradient(circle at 50% 45%, #f2f3ec 0%, #eceee5 55%, #e7e9e0 100%);
 }
-.welcome-features article {
-  min-height: 68px;
-  padding: 12px 15px;
-  border-radius: 17px;
-  box-shadow: none;
+.welcome-showcase-stage { position: absolute; inset: 0; }
+.welcome-showcase-stage canvas { display: block; cursor: grab; }
+.welcome-showcase-stage canvas:active { cursor: grabbing; }
+.welcome-showcase-note { color: #8b968f; font: 500 11px 'Noto Sans Thai'; }
+.welcome-showcase-caption {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #8b968f;
+  font: 600 10px Inter;
+  letter-spacing: .6px;
+  pointer-events: none;
 }
-.welcome-features article > span { width: 42px; height: 42px; }
-.welcome-features b { font-size: 13px; }
-.welcome-features small { font-size: 10px; }
-.welcome-footer { grid-column: 1 / -1; grid-row: 4; }
+/* Rows: icon / title / description / arrow. The 1fr on the description row pins
+   the arrow to the bottom so both cards align even when descriptions differ in length. */
+.welcome-action {
+  display: grid;
+  grid-template-rows: auto auto 1fr auto;
+  justify-items: start;
+  text-align: left;
+  padding: 24px 24px 20px;
+  border: 1px solid #e2dfd7;
+  border-radius: 22px;
+  background: #fff;
+  cursor: pointer;
+  transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+.welcome-action:hover { transform: translateY(-3px); border-color: #c9cec7; box-shadow: 0 14px 30px #1e3f3014; }
+.welcome-action:focus-visible { outline: 2px solid #10231e; outline-offset: 3px; }
+.welcome-action-icon {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  margin-bottom: 16px;
+  border-radius: 14px;
+  background: #10231e;
+  color: var(--mint);
+}
+.welcome-action.map .welcome-action-icon { background: #2b64d8; color: #fff; }
+.welcome-action-icon svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+.welcome-action b { font: 700 17px 'Noto Sans Thai'; }
+.welcome-action small { margin-top: 6px; color: #6f7e78; font-size: 12px; line-height: 1.6; }
+.welcome-action-arrow { margin-top: 18px; color: #10231e; font-size: 17px; transition: transform .18s ease; }
+.welcome-action.map .welcome-action-arrow { color: #2b64d8; }
+.welcome-action:hover .welcome-action-arrow { transform: translateX(5px); }
+@media (prefers-reduced-motion: reduce) {
+  .welcome-action, .welcome-action-arrow { transition: none; }
+  .welcome-action:hover, .welcome-action:hover .welcome-action-arrow { transform: none; }
+}
+.welcome-footer { grid-column: 1 / -1; grid-row: 3; }
 
 @media (max-width: 700px) {
   .welcome-page { padding: 0; }
   .welcome-shell {
     min-height: 100dvh;
     grid-template-columns: 1fr;
-    grid-template-rows: auto auto auto auto auto;
+    grid-template-rows: auto auto auto auto;
     gap: 10px;
     padding: 23px 20px 18px;
     border: 0;
     border-radius: 0;
   }
+  .welcome-main { grid-column: 1; grid-row: 2; justify-items: stretch; gap: 26px; padding: 8px 0; }
   .welcome-hero {
-    grid-column: 1;
-    grid-row: 2;
     justify-self: stretch;
-    padding: 28px 0 4px;
     text-align: left;
   }
   .welcome-hero h1 { font-size: clamp(42px, 13vw, 58px); }
   .welcome-hero p { margin-left: 0; }
-  .welcome-actions { justify-content: flex-start; }
-  .welcome-orbit { grid-column: 1; grid-row: 3; width: min(68vw, 270px); }
-  .welcome-features { grid-column: 1; grid-row: 4; grid-template-columns: repeat(3, 1fr); gap: 7px; }
-  .welcome-features article { min-height: 0; padding: 10px 7px; }
-  .welcome-footer { grid-column: 1; grid-row: 5; }
+  .welcome-actions { grid-template-columns: 1fr; gap: 10px; width: 100%; }
+  .welcome-action { padding: 18px; border-radius: 18px; }
+  .welcome-action-icon { width: 40px; height: 40px; margin-bottom: 12px; border-radius: 12px; }
+  .welcome-action b { font-size: 15px; }
+  .welcome-action-arrow { margin-top: 12px; }
+  .welcome-showcase { grid-column: 1; grid-row: 3; min-height: 300px; border-radius: 20px; }
+  .welcome-footer { grid-column: 1; grid-row: 4; }
   .welcome-header-actions { gap: 7px; }
   .welcome-status { display: none; }
 }

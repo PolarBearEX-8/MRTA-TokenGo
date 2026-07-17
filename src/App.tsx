@@ -1,5 +1,6 @@
 // PLEASE READ LICENSE.md. TokenGo is protected software. Do not copy, rename, remove attribution, or submit derivative work without permission.
 import { useEffect, useRef, useState, type MouseEvent, type PointerEvent as ReactPointerEvent } from 'react';
+import type { Mesh } from 'three'; // Type-only: erased at build, three itself stays dynamically imported.
 import './welcome.css';
 
 type View = 'home' | 'checkout' | 'booking' | 'planner' | 'map' | 'machine' | 'wallet';
@@ -172,7 +173,12 @@ const thaiEnglishPhrases: [string, string][] = [
   ['เดินทางง่ายขึ้น', 'Travel made easier'],
   ['เริ่มต้นได้ที่นี่', 'Start right here'],
   ['เข้าสู่ Simulate App', 'Enter Simulate App'],
+  ['ทดลองใช้แอปจอง Token แบบจำลอง', 'Try the simulated Token-booking app'],
+  ['กำลังโหลดโมเดล', 'Loading model'],
+  ['แสดงโมเดลไม่ได้', 'Model unavailable'],
+  ['ลากเพื่อหมุน', 'Drag to rotate'],
   ['แผนที่ Interactive', 'Interactive map'],
+  ['เลือกสถานีบนแผนที่ MRT และดูค่าโดยสารทันที', 'Pick stations on the MRT map and see fares instantly'],
   ['วางแผนเส้นทาง', 'Plan your route'],
   ['เลือกสถานีที่ต้องการเดินทาง', 'Choose the stations for your journey'],
   ['จอง Token', 'Book a Token'],
@@ -934,8 +940,110 @@ function Nav({ view, go }: { view: View; go: Go }) {
   return <nav className="bottom-nav">{tabs.map(([id,icon,label]) => <button key={id} className={`${view === id ? 'nav-active ' : ''}${id === 'booking' ? 'scan-nav' : ''}`} onClick={() => go(id)}><span><Icon name={icon} /></span>{label}</button>)}</nav>;
 }
 
+// Autodesk ATF exports the part Z-up; three.js is Y-up, so the long axis needs laying upright.
+const modelUpAxisFix = -Math.PI / 2;
+
+function ModelShowcase() {
+  const mountRef = useRef<HTMLDivElement>(null);
+  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+
+  useEffect(() => {
+    const mount = mountRef.current;
+    if (!mount) return;
+    let disposed = false;
+    let teardown = () => {};
+
+    // three is only needed on this page, so it is code-split out of the main bundle.
+    (async () => {
+      try {
+        const [THREE, { OBJLoader }, { OrbitControls }, { RoomEnvironment }] = await Promise.all([
+          import('three'),
+          import('three/examples/jsm/loaders/OBJLoader.js'),
+          import('three/examples/jsm/controls/OrbitControls.js'),
+          import('three/examples/jsm/environments/RoomEnvironment.js'),
+        ]);
+        const object = await new OBJLoader().loadAsync(publicAsset('models/MATA.obj'));
+        if (disposed) return;
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setSize(mount.clientWidth, mount.clientHeight);
+        mount.appendChild(renderer.domElement);
+
+        const scene = new THREE.Scene();
+        const pmrem = new THREE.PMREMGenerator(renderer);
+        const environment = pmrem.fromScene(new RoomEnvironment(), 0.04);
+        scene.environment = environment.texture;
+
+        const camera = new THREE.PerspectiveCamera(38, mount.clientWidth / mount.clientHeight, 0.1, 4000);
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enablePan = false;
+        controls.enableZoom = false; // Zoom would swallow page scroll over the canvas.
+        controls.enableDamping = true;
+        controls.autoRotate = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        controls.autoRotateSpeed = 1.4;
+
+        const steel = new THREE.MeshStandardMaterial({ color: 0xb4bbb6, metalness: 0.9, roughness: 0.3 });
+        object.traverse(child => { if ((child as Mesh).isMesh) (child as Mesh).material = steel; });
+        object.rotation.x = modelUpAxisFix;
+
+        const sphere = new THREE.Box3().setFromObject(object).getBoundingSphere(new THREE.Sphere());
+        object.position.sub(sphere.center);
+        scene.add(object);
+        controls.target.set(0, 0, 0);
+
+        // Fit against whichever of the two FOVs is tighter, so narrow panes never crop the part.
+        const frameCamera = () => {
+          const { clientWidth: width, clientHeight: height } = mount;
+          if (!width || !height) return;
+          camera.aspect = width / height;
+          const verticalFov = camera.fov * Math.PI / 180;
+          const horizontalFov = 2 * Math.atan(Math.tan(verticalFov / 2) * camera.aspect);
+          const distance = Math.max(sphere.radius / Math.sin(verticalFov / 2), sphere.radius / Math.sin(horizontalFov / 2)) * 1.15;
+          camera.position.setFromSphericalCoords(distance, Math.PI * 0.42, Math.PI * 0.25);
+          camera.updateProjectionMatrix();
+          renderer.setSize(width, height);
+        };
+        frameCamera();
+        setStatus('ready');
+
+        let frame = requestAnimationFrame(function render() {
+          frame = requestAnimationFrame(render);
+          controls.update();
+          renderer.render(scene, camera);
+        });
+        const observer = new ResizeObserver(frameCamera);
+        observer.observe(mount);
+
+        teardown = () => {
+          cancelAnimationFrame(frame);
+          observer.disconnect();
+          controls.dispose();
+          object.traverse(child => { if ((child as Mesh).isMesh) (child as Mesh).geometry.dispose(); });
+          steel.dispose();
+          environment.texture.dispose();
+          pmrem.dispose();
+          renderer.dispose();
+          renderer.domElement.remove();
+        };
+      } catch {
+        if (!disposed) setStatus('error');
+      }
+    })();
+
+    return () => { disposed = true; teardown(); };
+  }, []);
+
+  return <div className="welcome-showcase">
+    <div className="welcome-showcase-stage" ref={mountRef} />
+    {status === 'loading' && <span className="welcome-showcase-note">กำลังโหลดโมเดล</span>}
+    {status === 'error' && <span className="welcome-showcase-note">แสดงโมเดลไม่ได้</span>}
+    {status === 'ready' && <span className="welcome-showcase-caption">MATA · ลากเพื่อหมุน</span>}
+  </div>;
+}
+
 function WelcomePage({ onSimulate, onInteractiveMap, language, setLanguage }: { onSimulate: () => void; onInteractiveMap: () => void; language: Language; setLanguage: (language: Language) => void }) {
-  return <main className="welcome-page"><div className="welcome-glow welcome-glow-a"/><div className="welcome-glow welcome-glow-b"/><section className="welcome-shell"><header className="welcome-header"><div className="welcome-brand"><span className="welcome-mark">M</span><span>MRT<span> - TokenGo</span></span></div><div className="welcome-header-actions"><span className="welcome-status"><i/> Blue Line</span><div className="welcome-language-switch" role="group" aria-label="ภาษา"><button type="button" className={language === 'th' ? 'active' : ''} onClick={() => setLanguage('th')} aria-pressed={language === 'th'}>TH</button><button type="button" className={language === 'en' ? 'active' : ''} onClick={() => setLanguage('en')} aria-pressed={language === 'en'}>EN</button></div></div></header><div className="welcome-hero"><span className="welcome-kicker">SMART TRANSIT TOKEN</span><h1>เดินทางง่ายขึ้น<br/><em>เริ่มต้นได้ที่นี่</em></h1><p>วางแผนเส้นทาง จอง Token และติดตามการเดินทางของคุณในที่เดียว</p><div className="welcome-actions"><button className="welcome-cta" onClick={onSimulate}>เข้าสู่ Simulate App <span>→</span></button><button className="welcome-map-cta" onClick={onInteractiveMap}><Icon name="map"/> แผนที่ Interactive</button></div></div><div className="welcome-orbit"><div className="welcome-orbit-inner"><span>BL</span><strong>01</strong></div><i className="orbit-dot orbit-dot-a"/><i className="orbit-dot orbit-dot-b"/></div><div className="welcome-features"><article><span><Icon name="map"/></span><b>วางแผนเส้นทาง</b><small>เลือกสถานีที่ต้องการเดินทาง</small></article><article><span><Icon name="plus"/></span><b>จอง Token</b><small>รับ Token ได้ง่ายและรวดเร็ว</small></article><article><span><Icon name="scan"/></span><b>ดูแผนที่</b><small>ติดตามเส้นทางสายสีน้ำเงิน</small></article></div><footer className="welcome-footer"><span>พร้อมเดินทางไปกับคุณ</span><span>v1.0 · MRT Bangkok</span></footer></section></main>;
+  return <main className="welcome-page"><section className="welcome-shell"><header className="welcome-header"><div className="welcome-brand"><span className="welcome-mark">M</span><span>MRT<span> - TokenGo</span></span></div><div className="welcome-header-actions"><span className="welcome-status"><i/> Blue Line</span><div className="welcome-language-switch" role="group" aria-label="ภาษา"><button type="button" className={language === 'th' ? 'active' : ''} onClick={() => setLanguage('th')} aria-pressed={language === 'th'}>TH</button><button type="button" className={language === 'en' ? 'active' : ''} onClick={() => setLanguage('en')} aria-pressed={language === 'en'}>EN</button></div></div></header><div className="welcome-main"><div className="welcome-hero"><span className="welcome-kicker">SMART TRANSIT TOKEN</span><h1>เดินทางง่ายขึ้น<br/><em>เริ่มต้นได้ที่นี่</em></h1><p>วางแผนเส้นทาง จอง Token และติดตามการเดินทางของคุณในที่เดียว</p></div><div className="welcome-actions"><button type="button" className="welcome-action" onClick={onSimulate}><span className="welcome-action-icon"><Icon name="home"/></span><b>เข้าสู่ Simulate App</b><small>ทดลองใช้แอปจอง Token แบบจำลอง</small><span className="welcome-action-arrow" aria-hidden="true">→</span></button><button type="button" className="welcome-action map" onClick={onInteractiveMap}><span className="welcome-action-icon"><Icon name="map"/></span><b>แผนที่ Interactive</b><small>เลือกสถานีบนแผนที่ MRT และดูค่าโดยสารทันที</small><span className="welcome-action-arrow" aria-hidden="true">→</span></button></div></div><ModelShowcase/><footer className="welcome-footer"><span>พร้อมเดินทางไปกับคุณ</span><span>v1.0 · MRT Bangkok</span></footer></section></main>;
 }
 
 export default function App() {
