@@ -174,8 +174,13 @@ const thaiEnglishPhrases: [string, string][] = [
   ['เริ่มต้นได้ที่นี่', 'Start right here'],
   ['เข้าสู่ Simulate App', 'Enter Simulate App'],
   ['ทดลองใช้แอปจอง Token แบบจำลอง', 'Try the simulated Token-booking app'],
-  ['ดูโมเดล 3 มิติของ MATA', 'View the MATA 3D model'],
-  ['โมเดล MATA', 'MATA model'],
+  ['ดู Model ของตู้แลกเหรียญ', 'View the token machine model'],
+  ['สำรวจโมเดลตู้แลกเหรียญแบบ 3 มิติ', 'Explore the token machine in 3D'],
+  ['โมเดลตู้แลกเหรียญ', 'Token machine model'],
+  ['ตู้แลกเหรียญ', 'Token machine'],
+  ['ตู้แลกเหรียญ · ลากเพื่อหมุน · Scroll เพื่อซูม', 'Token machine · Drag to rotate · Scroll to zoom'],
+  ['ดูโมเดล 3 มิติของ MRTA', 'View the MRTA 3D model'],
+  ['โมเดล MRTA', 'MRTA model'],
   ['กำลังโหลดโมเดล', 'Loading model'],
   ['แสดงโมเดลไม่ได้', 'Model unavailable'],
   ['ลากเพื่อหมุน', 'Drag to rotate'],
@@ -342,7 +347,10 @@ function Header({ go, language, setLanguage }: { go: Go; language: Language; set
   }, [theme]);
   const isThai = language === 'th';
   return <header className="topbar">
-    <button className="brand plain" onClick={() => go('home')}><span className="brand-mark">M</span><span>Token<span>Go</span></span></button>
+    <button className="brand sim-brand plain" onClick={() => go('home')} aria-label="TokenGo">
+      <img className="sim-brand-mark" src={publicAsset('icons/tokengo-logo.png')} alt="" width={36} height={36} />
+      <span>Token<span>Go</span></span>
+    </button>
     <div className="top-actions">
       <button className="icon-button" onClick={() => go('map')} aria-label={isThai ? 'เปิดแผนที่' : 'Open map'}><Icon name="map" /></button>
       <button className="avatar" onClick={() => setProfileOpen(current => !current)} aria-expanded={profileOpen} aria-label={isThai ? 'เปิดโปรไฟล์' : 'Open profile'}>NP</button>
@@ -980,7 +988,8 @@ function ModelStage() {
         const camera = new THREE.PerspectiveCamera(38, mount.clientWidth / mount.clientHeight, 0.1, 4000);
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enablePan = false;
-        controls.enableZoom = false; // Zoom would swallow page scroll over the canvas.
+        controls.enableZoom = true;
+        controls.zoomToCursor = false;
         controls.enableDamping = true;
         controls.autoRotate = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         controls.autoRotateSpeed = 1.4;
@@ -988,11 +997,14 @@ function ModelStage() {
         const steel = new THREE.MeshStandardMaterial({ color: 0xb4bbb6, metalness: 0.9, roughness: 0.3 });
         object.traverse(child => { if ((child as Mesh).isMesh) (child as Mesh).material = steel; });
         object.rotation.x = modelUpAxisFix;
+        object.rotateOnWorldAxis(new THREE.Vector3(0, 1, 0), Math.PI);
 
         const sphere = new THREE.Box3().setFromObject(object).getBoundingSphere(new THREE.Sphere());
         object.position.sub(sphere.center);
         scene.add(object);
         controls.target.set(0, 0, 0);
+        controls.minDistance = sphere.radius * 1.25;
+        controls.maxDistance = sphere.radius * 5;
 
         // Fit against whichever of the two FOVs is tighter, so narrow panes never crop the part.
         const frameCamera = () => {
@@ -1040,7 +1052,7 @@ function ModelStage() {
     <div className="model-stage" ref={mountRef} />
     {status === 'loading' && <span className="model-note">กำลังโหลดโมเดล</span>}
     {status === 'error' && <span className="model-note">แสดงโมเดลไม่ได้</span>}
-    {status === 'ready' && <span className="model-caption">MATA · ลากเพื่อหมุน</span>}
+    {status === 'ready' && <span className="model-caption">ตู้แลกเหรียญ · ลากเพื่อหมุน · Scroll เพื่อซูม</span>}
   </>;
 }
 
@@ -1049,7 +1061,7 @@ function ModelShowcasePage({ onBack }: { onBack: () => void }) {
   return <main className="model-page">
     <header className="model-header">
       <button className="map-back" onClick={onBack}>← กลับ Welcome</button>
-      <div><span>3D MODEL SHOWCASE</span><h1>โมเดล MATA</h1></div>
+      <div><span>3D TOKEN MACHINE</span><h1>โมเดลตู้แลกเหรียญ</h1></div>
     </header>
     <section className="model-stage-card"><ModelStage /></section>
   </main>;
@@ -1061,15 +1073,16 @@ function WelcomeTrain() {
   return <div className="welcome-train" aria-hidden="true">
     <span className="welcome-train-rail" />
     <div className="welcome-train-car">
-      <svg viewBox="0 0 340 52" fill="none">
-        <rect x="4" y="8" width="100" height="29" rx="7" fill="#10231e" />
-        <rect x="110" y="8" width="100" height="29" rx="7" fill="#10231e" />
-        <path d="M216 37V15a7 7 0 0 1 7-7h73c22 0 36 12 36 24v5Z" fill="#10231e" />
-        <g fill="#d9f47c">
-          <rect x="15" y="14" width="15" height="11" rx="2" />
-          <rect x="36" y="14" width="15" height="11" rx="2" />
-          <rect x="57" y="14" width="15" height="11" rx="2" />
-          <rect x="78" y="14" width="15" height="11" rx="2" />
+      <svg viewBox="0 0 446 52" fill="none">
+        <path d="M8 37v-5C8 20 22 8 44 8h60v29Z" fill="#2b64d8" />
+        <rect x="110" y="8" width="100" height="29" rx="7" fill="#2b64d8" />
+        <rect x="216" y="8" width="100" height="29" rx="7" fill="#2b64d8" />
+        <path d="M322 37V15a7 7 0 0 1 7-7h73c22 0 36 12 36 24v5Z" fill="#2b64d8" />
+        <g fill="#e9f0ff">
+          <path d="M43 14h7v9a2 2 0 0 1-2 2H19c4-5 12-11 24-11Z" />
+          <rect x="57" y="14" width="12" height="11" rx="2" />
+          <rect x="76" y="14" width="12" height="11" rx="2" />
+          <rect x="95" y="14" width="8" height="11" rx="2" />
           <rect x="121" y="14" width="15" height="11" rx="2" />
           <rect x="142" y="14" width="15" height="11" rx="2" />
           <rect x="163" y="14" width="15" height="11" rx="2" />
@@ -1077,12 +1090,17 @@ function WelcomeTrain() {
           <rect x="227" y="14" width="15" height="11" rx="2" />
           <rect x="248" y="14" width="15" height="11" rx="2" />
           <rect x="269" y="14" width="15" height="11" rx="2" />
-          <path d="M292 14h6c11 0 19 6 23 11h-29a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2Z" />
+          <rect x="290" y="14" width="15" height="11" rx="2" />
+          <rect x="333" y="14" width="15" height="11" rx="2" />
+          <rect x="354" y="14" width="15" height="11" rx="2" />
+          <rect x="375" y="14" width="15" height="11" rx="2" />
+          <path d="M398 14h6c11 0 19 6 23 11h-29a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2Z" />
         </g>
-        <g fill="#2b64d8">
+        <g fill="#d9f47c">
           <rect x="4" y="27" width="100" height="2" />
           <rect x="110" y="27" width="100" height="2" />
-          <rect x="216" y="27" width="106" height="2" />
+          <rect x="216" y="27" width="100" height="2" />
+          <rect x="322" y="27" width="106" height="2" />
         </g>
         <g fill="#3d4c46">
           <circle cx="22" cy="40.5" r="3.5" />
@@ -1090,7 +1108,9 @@ function WelcomeTrain() {
           <circle cx="128" cy="40.5" r="3.5" />
           <circle cx="192" cy="40.5" r="3.5" />
           <circle cx="234" cy="40.5" r="3.5" />
-          <circle cx="300" cy="40.5" r="3.5" />
+          <circle cx="298" cy="40.5" r="3.5" />
+          <circle cx="340" cy="40.5" r="3.5" />
+          <circle cx="406" cy="40.5" r="3.5" />
         </g>
       </svg>
     </div>
@@ -1098,7 +1118,7 @@ function WelcomeTrain() {
 }
 
 function WelcomePage({ onSimulate, onInteractiveMap, onModelShowcase, language, setLanguage }: { onSimulate: () => void; onInteractiveMap: () => void; onModelShowcase: () => void; language: Language; setLanguage: (language: Language) => void }) {
-  return <main className="welcome-page"><section className="welcome-shell"><header className="welcome-header"><div className="welcome-brand"><img className="welcome-mark" src={publicAsset('icons/tokengo-logo.png')} alt="" width={38} height={38}/><span>MRT<span> - TokenGo</span></span></div><div className="welcome-header-actions"><span className="welcome-status"><i/> Blue Line</span><div className="welcome-language-switch" role="group" aria-label="ภาษา"><button type="button" className={language === 'th' ? 'active' : ''} onClick={() => setLanguage('th')} aria-pressed={language === 'th'}>TH</button><button type="button" className={language === 'en' ? 'active' : ''} onClick={() => setLanguage('en')} aria-pressed={language === 'en'}>EN</button></div></div></header><div className="welcome-main"><div className="welcome-hero"><span className="welcome-kicker">SMART TRANSIT TOKEN</span><h1>เดินทางง่ายขึ้น<br/><em>เริ่มต้นได้ที่นี่</em></h1><p>วางแผนเส้นทาง จอง Token และติดตามการเดินทางของคุณในที่เดียว</p></div><div className="welcome-actions"><button type="button" className="welcome-action" onClick={onSimulate}><span className="welcome-action-icon"><Icon name="home"/></span><b>เข้าสู่ Simulate App</b><small>ทดลองใช้แอปจอง Token แบบจำลอง</small><span className="welcome-action-arrow" aria-hidden="true">→</span></button><button type="button" className="welcome-action map" onClick={onInteractiveMap}><span className="welcome-action-icon"><Icon name="map"/></span><b>แผนที่ Interactive</b><small>เลือกสถานีบนแผนที่ MRT และดูค่าโดยสารทันที</small><span className="welcome-action-arrow" aria-hidden="true">→</span></button><button type="button" className="welcome-action model" onClick={onModelShowcase}><span className="welcome-action-icon"><Icon name="scan"/></span><b>Model showcase</b><small>ดูโมเดล 3 มิติของ MATA</small><span className="welcome-action-arrow" aria-hidden="true">→</span></button></div></div><WelcomeTrain/></section></main>;
+  return <main className="welcome-page"><section className="welcome-shell"><header className="welcome-header"><div className="welcome-brand"><img className="welcome-mark" src={publicAsset('icons/tokengo-logo.png')} alt="" width={38} height={38}/><span>MRT<span> - TokenGo</span></span></div><div className="welcome-header-actions"><span className="welcome-status"><i/> Blue Line</span><div className="welcome-language-switch" role="group" aria-label="ภาษา"><button type="button" className={language === 'th' ? 'active' : ''} onClick={() => setLanguage('th')} aria-pressed={language === 'th'}>TH</button><button type="button" className={language === 'en' ? 'active' : ''} onClick={() => setLanguage('en')} aria-pressed={language === 'en'}>EN</button></div></div></header><div className="welcome-main"><div className="welcome-hero"><span className="welcome-kicker">SMART TRANSIT TOKEN</span><h1>เดินทางง่ายขึ้น<br/><em>เริ่มต้นได้ที่นี่</em></h1><p>วางแผนเส้นทาง จอง Token และติดตามการเดินทางของคุณในที่เดียว</p></div><div className="welcome-actions"><button type="button" className="welcome-action" onClick={onSimulate}><span className="welcome-action-icon"><Icon name="home"/></span><b>เข้าสู่ Simulate App</b><small>ทดลองใช้แอปจอง Token แบบจำลอง</small><span className="welcome-action-arrow" aria-hidden="true">→</span></button><button type="button" className="welcome-action map" onClick={onInteractiveMap}><span className="welcome-action-icon"><Icon name="map"/></span><b>แผนที่ Interactive</b><small>เลือกสถานีบนแผนที่ MRT และดูค่าโดยสารทันที</small><span className="welcome-action-arrow" aria-hidden="true">→</span></button><button type="button" className="welcome-action model" onClick={onModelShowcase}><span className="welcome-action-icon"><Icon name="scan"/></span><b>ดู Model ของตู้แลกเหรียญ</b><small>สำรวจโมเดลตู้แลกเหรียญแบบ 3 มิติ</small><span className="welcome-action-arrow" aria-hidden="true">→</span></button></div></div><WelcomeTrain/></section></main>;
 }
 
 export default function App() {

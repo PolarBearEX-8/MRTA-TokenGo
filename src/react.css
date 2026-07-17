@@ -1,5 +1,7 @@
 /* PLEASE READ LICENSE.md. TokenGo is protected software; copying, removing attribution, or creating derivative work is restricted. */
 .plain { border: 0; background: transparent; padding: 0; cursor: pointer; }
+.sim-brand { gap: 9px; font-size: 16px; white-space: nowrap; }
+.sim-brand-mark { display: block; width: 36px; height: 36px; object-fit: contain; }
 body.simulate-screen { background: #e8e5df !important; }
 body.simulate-screen .ambient { display: none; }
 body.simulate-screen .shell { box-shadow: none; }
@@ -1142,7 +1144,7 @@ body.simulate-screen .shell { box-shadow: none; }
   position: absolute;
   bottom: 0;
   left: 0;
-  width: 340px;
+  width: 446px;
   height: 52px;
   animation: welcome-train-run 38s linear infinite;
 }
@@ -1180,7 +1182,7 @@ body.simulate-screen .shell { box-shadow: none; }
   .welcome-action b { font-size: 15px; }
   .welcome-action-arrow { margin-top: 12px; }
   .welcome-train { grid-row: 3; height: 38px; }
-  .welcome-train-car { width: 240px; height: 38px; }
+  .welcome-train-car { width: 300px; height: 38px; }
   .welcome-train-rail { bottom: 4px; }
   .welcome-header-actions { gap: 7px; }
   .welcome-status { display: none; }
