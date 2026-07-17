@@ -367,12 +367,16 @@ function Header({ go, language, setLanguage }: { go: Go; language: Language; set
 
 type HomeProps = {
   go: Go;
+  activeSlide: number;
+  setActiveSlide: (index: number) => void;
   bookToken: () => void;
   origin: string;
   setOrigin: (value: string) => void;
   destination: string;
   setDestination: (value: string) => void;
 };
+
+const bannerSlides = ['Test1', 'Test2', 'Test3'];
 
 function StationSelect({ id, label, value, onChange }: { id: string; label: string; value: string; onChange: (value: string) => void }) {
   const [open, setOpen] = useState(false);
@@ -401,14 +405,8 @@ function StationSelect({ id, label, value, onChange }: { id: string; label: stri
   return <div className="station-select"><small>{label}</small><button type="button" className="station-select-trigger" onClick={toggle}><span>{selected ? <><b>{selected.code}</b> {selected.nameTh}</> : <em>เลือกสถานี</em>}</span><i>⌄</i></button>{open && <div className="station-options"><input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="พิมพ์ค้นหาสถานี..." aria-label={`ค้นหา${label}`} autoFocus />{filteredStations.length ? filteredStations.map(station => <button type="button" key={station.code} className={station.code === selected?.code ? 'selected' : ''} onClick={() => { onChange(station.nameTh); setOpen(false); setQuery(''); }}><b>{station.code}</b><span>{station.nameTh}<small>{station.nameEn}</small></span></button>) : <p className="station-empty">ไม่พบสถานีที่ค้นหา</p>}</div>}</div>;
 }
 
-function Home({ go }: HomeProps) {
-  const [activeSlide, setActiveSlide] = useState(0);
+function Home({ go, activeSlide, setActiveSlide }: HomeProps) {
   const [isHomeScrolled, setIsHomeScrolled] = useState(false);
-  const slides = ['Test1', 'Test2', 'Test3'];
-  useEffect(() => {
-    const timer = window.setInterval(() => setActiveSlide(current => (current + 1) % slides.length), 4500);
-    return () => window.clearInterval(timer);
-  }, [slides.length]);
   useEffect(() => {
     const view = document.querySelector('.home-shell .view.active');
     if (!(view instanceof HTMLElement)) return;
@@ -422,13 +420,13 @@ function Home({ go }: HomeProps) {
     <section className="home-slideshow" aria-label="ข่าวสารและบริการ">
       <div className="home-slides" aria-live="polite">
         <div className="home-slide-track" style={{ transform: `translateX(-${activeSlide * 100}%)` }}>
-          {slides.map((slide, index) => <article className={`home-slide home-slide-${index + 1} ${activeSlide === index ? 'active' : ''}`} aria-hidden={activeSlide !== index} key={slide}>
+          {bannerSlides.map((slide, index) => <article className={`home-slide home-slide-${index + 1} ${activeSlide === index ? 'active' : ''}`} aria-hidden={activeSlide !== index} key={slide}>
             <h1 className="home-slide-placeholder">{slide}</h1>
           </article>)}
         </div>
       </div>
       <div className="home-slide-dots" role="group" aria-label="เลือกสไลด์">
-        {slides.map((slide, index) => <button type="button" className={activeSlide === index ? 'active' : ''} onClick={() => setActiveSlide(index)} aria-label={`สไลด์ ${index + 1}: ${slide}`} aria-pressed={activeSlide === index} key={slide}/>) }
+        {bannerSlides.map((slide, index) => <button type="button" className={activeSlide === index ? 'active' : ''} onClick={() => setActiveSlide(index)} aria-label={`สไลด์ ${index + 1}: ${slide}`} aria-pressed={activeSlide === index} key={slide}/>) }
       </div>
     </section>
     <article className="balance-card"><div><span>Cash Balance</span><strong>฿124.00</strong></div><button onClick={() => go('wallet')}>ดูรายการ <span>→</span></button><div className="card-orbit" /></article>
@@ -1257,42 +1255,60 @@ function DebugPanel({ view, route, navigate, setOrigin, setDestination, showToas
   </>;
 }
 
-type MachineDemoStep = 'ready' | 'dispensed' | 'holding' | 'inserted';
+type MachineRedeemStep = 'idle' | 'qr' | 'scanning' | 'dispensed';
 
-function CoinMachineSimulator({ view, ticket }: { view: View; ticket: BookedTicket | null }) {
-  const [step, setStep] = useState<MachineDemoStep>('ready');
-  const isTicketReady = ticket?.status === 'ready' || view === 'machine';
-
-  return <aside className={`coin-machine-sim ${step}`} aria-label="เครื่องจำลองรับและใส่ Token">
-    <div className="coin-machine-topline"><span>MRTA</span><i>EXPRESS TOKEN</i></div>
-    <section className="coin-machine-screen" aria-live="polite">
-      <span className="machine-screen-kicker">TOKEN MACHINE · BL21</span>
-      {step === 'inserted' ? <>
-        <div className="machine-success-mark">✓</div><h2>ผ่านประตูได้</h2><p>รับ Token คืนด้านบน<br/>และเดินทางได้เลย</p>
-      </> : <>
-        <div className="machine-screen-icon">◎</div><h2>{isTicketReady ? 'พร้อมจ่าย Token' : 'ทดลองรับ Token'}</h2>
-        <p>{ticket ? <>ตั๋ว {ticket.code}<br/>{ticket.origin} → {ticket.destination}</> : <>กดปุ่มด้านล่าง<br/>เพื่อจำลองการรับเหรียญ</>}</p>
-      </>}
-    </section>
-    <div className="coin-machine-controls">
-      <button type="button" className={`machine-token-slot ${step === 'holding' ? 'active' : ''}`} onClick={() => step === 'holding' && setStep('inserted')} disabled={step !== 'holding'}>
-        <span className="slot-mouth" aria-hidden="true"/><b>{step === 'holding' ? 'กดเพื่อใส่ Token' : step === 'inserted' ? 'รับ Token แล้ว' : 'ช่องใส่ Token'}</b>
-      </button>
-      <div className="machine-dispense-area">
-        <button type="button" className="machine-dispense-button" onClick={() => setStep('dispensed')} disabled={step !== 'ready'}><span aria-hidden="true">●</span>{step === 'ready' ? 'กดจ่าย Token' : 'จ่าย Token แล้ว'}</button>
-        <div className={`machine-tray ${step === 'dispensed' ? 'has-token' : ''}`}>
-          {step === 'dispensed' && <button type="button" className="machine-coin" onClick={() => setStep('holding')} aria-label="หยิบ Token จากช่องรับ"><i>V</i><small>หยิบ</small></button>}
-          {step === 'holding' && <span className="machine-holding-note">ถือ Token อยู่ · กดช่องด้านบนเพื่อใส่</span>}
+function CoinMachineSimulator({ activeSlide, setActiveSlide }: { activeSlide: number; setActiveSlide: (index: number) => void }) {
+  const [redeemStep, setRedeemStep] = useState<MachineRedeemStep>('idle');
+  const redeemTimers = useRef<number[]>([]);
+  const showNextSlide = () => setActiveSlide((activeSlide + 1) % bannerSlides.length);
+  const clearRedeemTimers = () => { redeemTimers.current.forEach(timer => window.clearTimeout(timer)); redeemTimers.current = []; };
+  const startRedeem = () => {
+    clearRedeemTimers();
+    setRedeemStep('qr');
+    redeemTimers.current = [
+      window.setTimeout(() => setRedeemStep('scanning'), 650),
+      window.setTimeout(() => setRedeemStep('dispensed'), 3200),
+    ];
+  };
+  useEffect(() => clearRedeemTimers, []);
+  return <aside className="coin-machine-sim" aria-label="เครื่องจำลอง Token">
+    <div className="coin-machine-topline"><span>MRTA</span></div>
+    <section className="coin-machine-screen machine-banner-screen" aria-label="Banner ข่าวสาร" aria-live="polite">
+      {redeemStep === 'idle' ? <>
+        <div className="machine-screen-brand">Token<span>Go</span></div>
+        <div className="machine-banner-viewport" role="button" tabIndex={0} onClick={showNextSlide} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); showNextSlide(); } }} aria-label={`Banner ${bannerSlides[activeSlide]} กดเพื่อดูสไลด์ถัดไป`}>
+          <div className="machine-banner-track" style={{ transform: `translateX(-${activeSlide * 100}%)` }}>
+            {bannerSlides.map((slide, index) => <article className={`machine-banner-slide home-slide-${index + 1}`} aria-hidden={activeSlide !== index} key={slide}>
+              <h2>{slide}</h2>
+            </article>)}
+          </div>
+          <div className="machine-banner-dots" aria-hidden="true">
+            {bannerSlides.map((slide, index) => <i className={activeSlide === index ? 'active' : ''} key={slide}/>) }
+          </div>
         </div>
-      </div>
+        <div className="machine-screen-actions">
+          <button type="button" className="machine-redeem-button" onClick={startRedeem}>แลกรับเหรียญ</button>
+          <button type="button" className="machine-guide-button" disabled>ดูวิธีการใช้งาน</button>
+        </div>
+      </> : redeemStep === 'dispensed' ? <div className="machine-redeem-success">
+        <div>✓</div><h2>แลกรับเหรียญสำเร็จ</h2><p>รับเหรียญได้ที่ช่องด้านล่าง</p>
+        <button type="button" onClick={() => setRedeemStep('idle')}>กลับหน้าหลัก</button>
+      </div> : <div className={`machine-qr-stage is-${redeemStep}`}>
+        <span>SCAN TO REDEEM</span><img className="machine-qr-code" src={publicAsset('token-redemption-qr.png')} alt="QR แลกรับเหรียญ"/><h2>สแกน QR เพื่อรับเหรียญ</h2><p>{redeemStep === 'scanning' ? 'กำลังตรวจสอบ...' : 'เปิดกล้องบนมือถือแล้วสแกน QR'}</p>
+        {redeemStep === 'scanning' && <div className="machine-scan-phone" aria-hidden="true"><i/><b/></div>}
+      </div>}
+    </section>
+    <div className="coin-machine-lower-vertical" aria-hidden="true"/>
+    <div className={`coin-machine-lower-box ${redeemStep === 'dispensed' ? 'has-coin' : ''}`} aria-label={redeemStep === 'dispensed' ? 'เหรียญพร้อมรับ' : undefined}>
+      {redeemStep === 'dispensed' && <div className="machine-dispensed-coin"><span>V</span></div>}
     </div>
-    <footer><span>{step === 'ready' ? '1  กดจ่ายเหรียญ' : step === 'dispensed' ? '2  หยิบเหรียญจากช่องรับ' : step === 'holding' ? '3  นำเหรียญใส่ช่องด้านบน' : 'เสร็จสิ้น'}</span>{step === 'inserted' && <button type="button" onClick={() => setStep('ready')}>เริ่มใหม่ ↻</button>}</footer>
     <div className="coin-machine-legs" aria-hidden="true"><i/><i/></div>
   </aside>;
 }
 
 function SimulateApp({ onWelcome, language, setLanguage }: { onWelcome: () => void; language: Language; setLanguage: (language: Language) => void }) {
   const [view, setView] = useState<View>('home');
+  const [activeSlide, setActiveSlide] = useState(0);
   const navigationHistory = useRef<View[]>([]);
   const [mapReturnView, setMapReturnView] = useState<View>('home');
   const [origin, setOrigin] = useState('');
@@ -1300,6 +1316,10 @@ function SimulateApp({ onWelcome, language, setLanguage }: { onWelcome: () => vo
   const [bookedTickets, setBookedTickets] = useState<BookedTicket[]>([]);
   const [activeTicket, setActiveTicket] = useState<BookedTicket | null>(null);
   const [toast, setToast] = useState(false);
+  useEffect(() => {
+    const timer = window.setInterval(() => setActiveSlide(current => (current + 1) % bannerSlides.length), 4500);
+    return () => window.clearInterval(timer);
+  }, []);
   const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
   const go: Go = id => {
     if (id === 'back') {
@@ -1399,5 +1419,5 @@ function SimulateApp({ onWelcome, language, setLanguage }: { onWelcome: () => vo
   };
   const showDebugToast = () => { setToast(true); setTimeout(() => setToast(false), 2200); };
   const reset = () => { navigationHistory.current = []; localStorage.removeItem(walletLogStorageKey); setOrigin(''); setDestination(''); setBookedTickets([]); setActiveTicket(null); setToast(false); replaceView('home'); };
-  return <><button className="welcome-return" onClick={onWelcome}>← Welcome</button><div className="ambient ambient-a"/><div className="ambient ambient-b"/><div className="simulate-workspace"><CoinMachineSimulator view={view} ticket={activeTicket}/><main className={`shell ${view === 'home' ? 'home-shell' : ''}`}><Header go={go} language={language} setLanguage={setLanguage}/><section key={view} className={`view active ${view !== 'home' ? 'subview' : ''}`}>{view === 'home' && <Home go={go} bookToken={bookToken} origin={origin} setOrigin={setOrigin} destination={destination} setDestination={setDestination}/>} {view === 'checkout' && <Checkout go={go} route={activeTicket ?? route} pay={pay}/>} {view === 'booking' && <MyTickets go={go} tickets={bookedTickets} payTicket={payTicket} useTicket={useTicket}/>} {view === 'planner' && <BookingPlanner go={go} bookToken={bookToken} origin={origin} setOrigin={setOrigin} destination={destination} setDestination={setDestination}/>} {view === 'map' && <MapView go={go} backView={mapReturnView} origin={origin} setOrigin={setOrigin} destination={destination} setDestination={setDestination}/>} {view === 'machine' && <TokenScanner go={go} ticket={activeTicket} onComplete={completeTicket}/>} {view === 'wallet' && <Wallet go={go}/>}</section><Nav view={view} go={go}/></main></div><DebugPanel view={view} route={route} navigate={debugNavigate} setOrigin={setOrigin} setDestination={setDestination} showToast={showDebugToast} reset={reset} seedTicket={seedDebugTicket}/><div className={`toast ${toast ? 'show' : ''}`}>ชำระเงินสำเร็จ — พร้อมรับ Token</div></>;
+  return <><button className="welcome-return" onClick={onWelcome}>← Welcome</button><div className="ambient ambient-a"/><div className="ambient ambient-b"/><div className="simulate-workspace"><CoinMachineSimulator activeSlide={activeSlide} setActiveSlide={setActiveSlide}/><main className={`shell ${view === 'home' ? 'home-shell' : ''}`}><Header go={go} language={language} setLanguage={setLanguage}/><section key={view} className={`view active ${view !== 'home' ? 'subview' : ''}`}>{view === 'home' && <Home go={go} activeSlide={activeSlide} setActiveSlide={setActiveSlide} bookToken={bookToken} origin={origin} setOrigin={setOrigin} destination={destination} setDestination={setDestination}/>} {view === 'checkout' && <Checkout go={go} route={activeTicket ?? route} pay={pay}/>} {view === 'booking' && <MyTickets go={go} tickets={bookedTickets} payTicket={payTicket} useTicket={useTicket}/>} {view === 'planner' && <BookingPlanner go={go} bookToken={bookToken} origin={origin} setOrigin={setOrigin} destination={destination} setDestination={setDestination}/>} {view === 'map' && <MapView go={go} backView={mapReturnView} origin={origin} setOrigin={setOrigin} destination={destination} setDestination={setDestination}/>} {view === 'machine' && <TokenScanner go={go} ticket={activeTicket} onComplete={completeTicket}/>} {view === 'wallet' && <Wallet go={go}/>}</section><Nav view={view} go={go}/></main></div><DebugPanel view={view} route={route} navigate={debugNavigate} setOrigin={setOrigin} setDestination={setDestination} showToast={showDebugToast} reset={reset} seedTicket={seedDebugTicket}/><div className={`toast ${toast ? 'show' : ''}`}>ชำระเงินสำเร็จ — พร้อมรับ Token</div></>;
 }
