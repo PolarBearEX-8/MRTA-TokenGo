@@ -2,9 +2,83 @@
 .plain { border: 0; background: transparent; padding: 0; cursor: pointer; }
 .sim-brand { gap: 9px; font-size: 16px; white-space: nowrap; }
 .sim-brand-mark { display: block; width: 36px; height: 36px; object-fit: contain; }
-body.simulate-screen { background: #e8e5df !important; }
+body.simulate-screen { padding: 0 !important; background: #e8e5df !important; }
 body.simulate-screen .ambient { display: none; }
 body.simulate-screen .shell { box-shadow: none; }
+.simulate-workspace {
+  display: grid;
+  grid-template-columns: 330px 470px;
+  align-items: center;
+  justify-content: center;
+  gap: 42px;
+  min-height: 100dvh;
+  padding: 24px;
+}
+.simulate-workspace .shell { width: 470px; margin: 0; }
+.coin-machine-sim {
+  position: relative;
+  z-index: 0;
+  width: 330px;
+  margin-bottom: 62px;
+  overflow: visible;
+  border: 1px solid #737b77;
+  border-radius: 8px;
+  background: linear-gradient(105deg, #7f8783 0%, #9ba19e 7%, #8e9692 100%);
+  padding: 15px 16px 18px;
+  color: #10231e;
+  box-shadow: inset 3px 0 #b8bfbb, inset -3px 0 #68706c, 0 24px 55px #263c3230;
+}
+.coin-machine-sim::after { content: ''; position: absolute; inset: 7px; border: 1px solid #aeb5b1; border-radius: 3px; pointer-events: none; }
+.coin-machine-topline { position: relative; z-index: 1; display: flex; align-items: center; justify-content: space-between; margin: 0 4px 10px; }
+.coin-machine-topline span { color: #26312c; font: 900 14px Inter; letter-spacing: -.5px; }
+.coin-machine-topline i { color: #444e49; font: 800 7px Inter; font-style: normal; letter-spacing: 1px; }
+.coin-machine-screen {
+  position: relative;
+  z-index: 1;
+  min-height: 300px;
+  border: 4px solid #626b67;
+  border-radius: 2px;
+  background: radial-gradient(circle at 50% 12%, #244d40, #0c211b 66%);
+  color: #fff;
+  padding: 21px 18px;
+  text-align: center;
+  box-shadow: inset 0 0 28px #0008, -2px -2px #b8bfbb, 2px 2px #69716d;
+}
+.machine-screen-kicker { color: #a7c1b6; font: 700 7px Inter; letter-spacing: 1.2px; }
+.machine-screen-icon,
+.machine-success-mark { display: grid; place-items: center; width: 68px; height: 68px; margin: 23px auto 11px; border: 2px solid #d9f47c; border-radius: 50%; color: #d9f47c; font: 300 39px Inter; box-shadow: 0 0 24px #d9f47c1c; }
+.machine-success-mark { background: #d9f47c; color: #10231e; font-size: 29px; }
+.coin-machine-screen h2 { margin: 0 0 7px; font: 700 17px 'Noto Sans Thai'; }
+.coin-machine-screen p { margin: 0; color: #b7c6c0; font: 500 9px/1.65 'Noto Sans Thai'; }
+.coin-machine-controls { position: relative; z-index: 1; padding: 16px 10px 1px; }
+.machine-token-slot { display: grid; justify-items: center; gap: 7px; width: 100%; border: 0; background: transparent; color: #4f5d56; font: 600 9px 'Noto Sans Thai'; }
+.machine-token-slot:disabled { opacity: 1; }
+.slot-mouth { width: 74px; height: 13px; border: 4px solid #4c5551; border-radius: 10px; background: #151c19; box-shadow: inset 0 2px 5px #000, 0 1px 1px #fff8; }
+.machine-token-slot.active { color: #0f6b55; cursor: pointer; animation: machineSlotPulse 1.1s ease-in-out infinite; }
+.machine-token-slot.active .slot-mouth { border-color: #d9f47c; box-shadow: 0 0 0 4px #d9f47c38, inset 0 2px 5px #000; }
+.machine-dispense-area { margin-top: 13px; }
+.machine-dispense-button { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; border: 0; border-radius: 12px; background: #10231e; color: #fff; padding: 11px; font: 600 10px 'Noto Sans Thai'; cursor: pointer; }
+.machine-dispense-button span { color: #d9f47c; }
+.machine-dispense-button:disabled { cursor: default; opacity: .55; }
+.machine-tray { position: relative; display: grid; place-items: center; min-height: 65px; margin-top: 9px; overflow: hidden; border: 4px solid #68706c; border-radius: 2px 2px 8px 8px; background: linear-gradient(#1c2420, #0b100e); box-shadow: inset 0 8px 14px #000c, -1px -1px #b7bdb9, 1px 1px #5d6561; }
+.machine-tray::after { content: 'ช่องรับ TOKEN'; color: #718078; font: 700 6px Inter; letter-spacing: 1px; }
+.machine-coin { position: absolute; z-index: 2; display: grid; place-items: center; width: 53px; height: 53px; border: 4px solid #e9f7b2; border-radius: 50%; background: linear-gradient(145deg, #d9f47c, #89ad2b); color: #173a2f; box-shadow: inset 0 0 0 5px #ffffff47, 0 6px 12px #0008; cursor: pointer; animation: machineCoinDrop .45s ease-out both; }
+.machine-coin i { font: 900 19px Inter; font-style: normal; }
+.machine-coin small { position: absolute; bottom: -14px; color: #d9f47c; font: 600 7px 'Noto Sans Thai'; white-space: nowrap; }
+.machine-holding-note { color: #d9f47c; font: 600 8px 'Noto Sans Thai'; animation: machineNoteIn .25s ease-out; }
+.coin-machine-sim footer { position: relative; z-index: 1; display: flex; align-items: center; justify-content: space-between; min-height: 26px; margin: 11px 5px -4px; }
+.coin-machine-sim footer span { color: #526159; font: 650 8px 'Noto Sans Thai'; }
+.coin-machine-sim footer button { border: 0; border-radius: 8px; background: #ffffff80; color: #0f6b55; padding: 5px 8px; font: 700 8px 'Noto Sans Thai'; cursor: pointer; }
+.coin-machine-legs { position: absolute; z-index: -1; left: 0; right: 0; bottom: -72px; display: flex; justify-content: center; gap: 72px; pointer-events: none; }
+.coin-machine-legs i { display: block; width: 24px; height: 76px; border: 1px solid #69716d; border-top: 0; background: linear-gradient(90deg, #717975, #9da4a0 32%, #7b837f); box-shadow: inset -2px 0 #626a66; }
+@keyframes machineCoinDrop { from { transform: translateY(-55px) rotate(-90deg); opacity: 0; } to { transform: translateY(0) rotate(0); opacity: 1; } }
+@keyframes machineSlotPulse { 50% { transform: scale(1.025); } }
+@keyframes machineNoteIn { from { opacity: 0; transform: translateY(5px); } }
+@media (max-width: 880px) {
+  .simulate-workspace { display: flex; flex-direction: column; min-height: 100dvh; padding: 0; }
+  .simulate-workspace .shell { order: 1; width: min(100%, 470px); height: 100dvh; min-height: 100dvh; margin: 0 auto; border-radius: 0; }
+  .coin-machine-sim { order: 2; width: min(calc(100% - 28px), 350px); margin: 28px auto 105px; }
+}
 .profile-settings {
   width: 270px;
   padding: 10px;
@@ -948,8 +1022,8 @@ body.simulate-screen .shell { box-shadow: none; }
 .debug-panel button:hover { border-color: var(--green); color: var(--green); }
 
 @media (min-width: 1000px) {
-  .debug-fab { right: auto; left: calc(50% + 258px); bottom: 22px; }
-  .debug-panel { right: auto; left: calc(50% + 258px); top: 50%; bottom: auto; transform: translateY(calc(-50% + 10px)) scale(.98); transform-origin: left center; }
+  .debug-fab { right: 16px; left: auto; bottom: 22px; }
+  .debug-panel { right: 12px; left: auto; top: 50%; bottom: auto; transform: translateY(calc(-50% + 10px)) scale(.98); transform-origin: right center; }
   .debug-panel.open { transform: translateY(-50%) scale(1); }
 }
 
@@ -1047,14 +1121,21 @@ body.simulate-screen .shell { box-shadow: none; }
 .model-header > div { flex: 1; }
 .model-header span { color: #0f6b55; font: 700 10px Inter; letter-spacing: 1.3px; }
 .model-header h1 { margin: 4px 0 0; font: 700 32px/1.2 'Noto Sans Thai'; }
+.model-showcase-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 18px;
+  width: min(100%, 1200px);
+  min-height: 0;
+  margin: 0 auto;
+}
 /* The stage owns the canvas; the caption sits outside it so WebGL never repaints over text. */
 .model-stage-card {
   position: relative;
   display: grid;
   place-items: center;
-  width: min(100%, 1200px);
+  width: 100%;
   min-height: 320px;
-  margin: 0 auto;
   overflow: hidden;
   border: 1px solid #d8e2db;
   border-radius: 24px;
@@ -1075,11 +1156,60 @@ body.simulate-screen .shell { box-shadow: none; }
   letter-spacing: .6px;
   pointer-events: none;
 }
+.model-download-panel {
+  align-self: stretch;
+  padding: 26px 22px;
+  border: 1px solid #d8e2db;
+  border-radius: 24px;
+  background: #f9fbf7;
+  box-shadow: 0 12px 32px #163b2b10;
+}
+.model-download-kicker { color: #0f6b55; font: 800 10px Inter; letter-spacing: 1.3px; }
+.model-download-panel h2 { margin: 7px 0 4px; font: 700 21px/1.3 'Noto Sans Thai'; }
+.model-download-panel > p { margin: 0; color: #6f7e76; font: 500 11px/1.6 'Noto Sans Thai'; }
+.model-download-list { display: grid; gap: 9px; margin: 22px 0 18px; }
+.model-download-list a {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) 22px;
+  align-items: center;
+  gap: 11px;
+  min-width: 0;
+  padding: 11px;
+  border: 1px solid #dce6df;
+  border-radius: 14px;
+  background: #fff;
+  color: #10231e;
+  text-decoration: none;
+  transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+.model-download-list a:hover { transform: translateY(-2px); border-color: #9ebbae; box-shadow: 0 8px 18px #163b2b12; }
+.model-download-list a:focus-visible { outline: 2px solid #0f6b55; outline-offset: 2px; }
+.model-file-icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 11px;
+  background: #e5f2eb;
+  color: #0f6b55;
+  font: 800 9px Inter;
+  letter-spacing: .3px;
+}
+.model-download-list a > span:nth-child(2) { min-width: 0; }
+.model-download-list b,
+.model-download-list small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.model-download-list b { font: 700 11px Inter; }
+.model-download-list small { margin-top: 3px; color: #809087; font: 600 9px Inter; }
+.model-download-list i { color: #0f6b55; font: 700 22px Inter; font-style: normal; text-align: center; }
+.model-download-note { display: block; color: #8b968f; font: 500 9px/1.55 'Noto Sans Thai'; }
 @media (max-width: 700px) {
   .model-page { padding: 18px 14px; gap: 12px; }
   .model-header { align-items: flex-start; gap: 9px; }
   .model-header h1 { font-size: 23px; }
   .model-stage-card { border-radius: 20px; }
+  .model-showcase-layout { grid-template-columns: 1fr; }
+  .model-stage-card { min-height: 56vh; }
+  .model-download-panel { padding: 21px 18px; border-radius: 20px; }
 }
 /* Rows: icon / title / description / arrow. The 1fr on the description row pins
    the arrow to the bottom so both cards align even when descriptions differ in length. */

@@ -953,6 +953,12 @@ function Nav({ view, go }: { view: View; go: Go }) {
 // Autodesk ATF exports the part Z-up; three.js is Y-up, so the long axis needs laying upright.
 const modelUpAxisFix = -Math.PI / 2;
 
+const modelDownloads = [
+  { format: 'OBJ', fileName: 'MRTA-OBJ.obj', size: '244 KB', url: new URL('../3D-Object/MRTA-OBJ.obj', import.meta.url).href },
+  { format: 'STL', fileName: 'MRTA-STL.stl', size: '343 KB', url: new URL('../3D-Object/MRTA-STL.stl', import.meta.url).href },
+  { format: 'STEP', fileName: 'MRTA-STP.step', size: '3.4 KB', url: new URL('../3D-Object/MRTA-STP.step', import.meta.url).href },
+];
+
 function ModelStage() {
   const mountRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
@@ -1063,7 +1069,22 @@ function ModelShowcasePage({ onBack }: { onBack: () => void }) {
       <button className="map-back" onClick={onBack}>← กลับ Welcome</button>
       <div><span>3D TOKEN MACHINE</span><h1>โมเดลตู้แลกเหรียญ</h1></div>
     </header>
-    <section className="model-stage-card"><ModelStage /></section>
+    <div className="model-showcase-layout">
+      <section className="model-stage-card"><ModelStage /></section>
+      <aside className="model-download-panel" aria-labelledby="model-download-title">
+        <span className="model-download-kicker">3D FILES</span>
+        <h2 id="model-download-title">ดาวน์โหลดโมเดล</h2>
+        <p>เลือกประเภทไฟล์ที่เหมาะกับโปรแกรม 3D ของคุณ</p>
+        <div className="model-download-list">
+          {modelDownloads.map(file => <a key={file.format} href={file.url} download={file.fileName} aria-label={`ดาวน์โหลดไฟล์ ${file.format}`}>
+            <span className="model-file-icon" aria-hidden="true">{file.format}</span>
+            <span><b>{file.fileName}</b><small>{file.format} · {file.size}</small></span>
+            <i aria-hidden="true">↓</i>
+          </a>)}
+        </div>
+        <small className="model-download-note">ไฟล์ต้นฉบับสำหรับงานออกแบบและงานพิมพ์ 3 มิติ</small>
+      </aside>
+    </div>
   </main>;
 }
 
@@ -1236,6 +1257,40 @@ function DebugPanel({ view, route, navigate, setOrigin, setDestination, showToas
   </>;
 }
 
+type MachineDemoStep = 'ready' | 'dispensed' | 'holding' | 'inserted';
+
+function CoinMachineSimulator({ view, ticket }: { view: View; ticket: BookedTicket | null }) {
+  const [step, setStep] = useState<MachineDemoStep>('ready');
+  const isTicketReady = ticket?.status === 'ready' || view === 'machine';
+
+  return <aside className={`coin-machine-sim ${step}`} aria-label="เครื่องจำลองรับและใส่ Token">
+    <div className="coin-machine-topline"><span>MRTA</span><i>EXPRESS TOKEN</i></div>
+    <section className="coin-machine-screen" aria-live="polite">
+      <span className="machine-screen-kicker">TOKEN MACHINE · BL21</span>
+      {step === 'inserted' ? <>
+        <div className="machine-success-mark">✓</div><h2>ผ่านประตูได้</h2><p>รับ Token คืนด้านบน<br/>และเดินทางได้เลย</p>
+      </> : <>
+        <div className="machine-screen-icon">◎</div><h2>{isTicketReady ? 'พร้อมจ่าย Token' : 'ทดลองรับ Token'}</h2>
+        <p>{ticket ? <>ตั๋ว {ticket.code}<br/>{ticket.origin} → {ticket.destination}</> : <>กดปุ่มด้านล่าง<br/>เพื่อจำลองการรับเหรียญ</>}</p>
+      </>}
+    </section>
+    <div className="coin-machine-controls">
+      <button type="button" className={`machine-token-slot ${step === 'holding' ? 'active' : ''}`} onClick={() => step === 'holding' && setStep('inserted')} disabled={step !== 'holding'}>
+        <span className="slot-mouth" aria-hidden="true"/><b>{step === 'holding' ? 'กดเพื่อใส่ Token' : step === 'inserted' ? 'รับ Token แล้ว' : 'ช่องใส่ Token'}</b>
+      </button>
+      <div className="machine-dispense-area">
+        <button type="button" className="machine-dispense-button" onClick={() => setStep('dispensed')} disabled={step !== 'ready'}><span aria-hidden="true">●</span>{step === 'ready' ? 'กดจ่าย Token' : 'จ่าย Token แล้ว'}</button>
+        <div className={`machine-tray ${step === 'dispensed' ? 'has-token' : ''}`}>
+          {step === 'dispensed' && <button type="button" className="machine-coin" onClick={() => setStep('holding')} aria-label="หยิบ Token จากช่องรับ"><i>V</i><small>หยิบ</small></button>}
+          {step === 'holding' && <span className="machine-holding-note">ถือ Token อยู่ · กดช่องด้านบนเพื่อใส่</span>}
+        </div>
+      </div>
+    </div>
+    <footer><span>{step === 'ready' ? '1  กดจ่ายเหรียญ' : step === 'dispensed' ? '2  หยิบเหรียญจากช่องรับ' : step === 'holding' ? '3  นำเหรียญใส่ช่องด้านบน' : 'เสร็จสิ้น'}</span>{step === 'inserted' && <button type="button" onClick={() => setStep('ready')}>เริ่มใหม่ ↻</button>}</footer>
+    <div className="coin-machine-legs" aria-hidden="true"><i/><i/></div>
+  </aside>;
+}
+
 function SimulateApp({ onWelcome, language, setLanguage }: { onWelcome: () => void; language: Language; setLanguage: (language: Language) => void }) {
   const [view, setView] = useState<View>('home');
   const navigationHistory = useRef<View[]>([]);
@@ -1344,5 +1399,5 @@ function SimulateApp({ onWelcome, language, setLanguage }: { onWelcome: () => vo
   };
   const showDebugToast = () => { setToast(true); setTimeout(() => setToast(false), 2200); };
   const reset = () => { navigationHistory.current = []; localStorage.removeItem(walletLogStorageKey); setOrigin(''); setDestination(''); setBookedTickets([]); setActiveTicket(null); setToast(false); replaceView('home'); };
-  return <><button className="welcome-return" onClick={onWelcome}>← Welcome</button><div className="ambient ambient-a"/><div className="ambient ambient-b"/><main className={`shell ${view === 'home' ? 'home-shell' : ''}`}><Header go={go} language={language} setLanguage={setLanguage}/><section key={view} className={`view active ${view !== 'home' ? 'subview' : ''}`}>{view === 'home' && <Home go={go} bookToken={bookToken} origin={origin} setOrigin={setOrigin} destination={destination} setDestination={setDestination}/>} {view === 'checkout' && <Checkout go={go} route={activeTicket ?? route} pay={pay}/>} {view === 'booking' && <MyTickets go={go} tickets={bookedTickets} payTicket={payTicket} useTicket={useTicket}/>} {view === 'planner' && <BookingPlanner go={go} bookToken={bookToken} origin={origin} setOrigin={setOrigin} destination={destination} setDestination={setDestination}/>} {view === 'map' && <MapView go={go} backView={mapReturnView} origin={origin} setOrigin={setOrigin} destination={destination} setDestination={setDestination}/>} {view === 'machine' && <TokenScanner go={go} ticket={activeTicket} onComplete={completeTicket}/>} {view === 'wallet' && <Wallet go={go}/>}</section><Nav view={view} go={go}/></main><DebugPanel view={view} route={route} navigate={debugNavigate} setOrigin={setOrigin} setDestination={setDestination} showToast={showDebugToast} reset={reset} seedTicket={seedDebugTicket}/><div className={`toast ${toast ? 'show' : ''}`}>ชำระเงินสำเร็จ — พร้อมรับ Token</div></>;
+  return <><button className="welcome-return" onClick={onWelcome}>← Welcome</button><div className="ambient ambient-a"/><div className="ambient ambient-b"/><div className="simulate-workspace"><CoinMachineSimulator view={view} ticket={activeTicket}/><main className={`shell ${view === 'home' ? 'home-shell' : ''}`}><Header go={go} language={language} setLanguage={setLanguage}/><section key={view} className={`view active ${view !== 'home' ? 'subview' : ''}`}>{view === 'home' && <Home go={go} bookToken={bookToken} origin={origin} setOrigin={setOrigin} destination={destination} setDestination={setDestination}/>} {view === 'checkout' && <Checkout go={go} route={activeTicket ?? route} pay={pay}/>} {view === 'booking' && <MyTickets go={go} tickets={bookedTickets} payTicket={payTicket} useTicket={useTicket}/>} {view === 'planner' && <BookingPlanner go={go} bookToken={bookToken} origin={origin} setOrigin={setOrigin} destination={destination} setDestination={setDestination}/>} {view === 'map' && <MapView go={go} backView={mapReturnView} origin={origin} setOrigin={setOrigin} destination={destination} setDestination={setDestination}/>} {view === 'machine' && <TokenScanner go={go} ticket={activeTicket} onComplete={completeTicket}/>} {view === 'wallet' && <Wallet go={go}/>}</section><Nav view={view} go={go}/></main></div><DebugPanel view={view} route={route} navigate={debugNavigate} setOrigin={setOrigin} setDestination={setDestination} showToast={showDebugToast} reset={reset} seedTicket={seedDebugTicket}/><div className={`toast ${toast ? 'show' : ''}`}>ชำระเงินสำเร็จ — พร้อมรับ Token</div></>;
 }
