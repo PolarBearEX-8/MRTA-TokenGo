@@ -1387,6 +1387,20 @@ body.simulate-screen .shell { box-shadow: none; }
 }
 .welcome-header { grid-column: 1 / -1; }
 .welcome-header-actions { display: flex; align-items: center; gap: 12px; }
+.welcome-github-link {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid #d7ddd7;
+  border-radius: 11px;
+  background: #fff;
+  color: #10231e;
+  transition: transform .18s ease, background .18s ease, color .18s ease;
+}
+.welcome-github-link svg { width: 18px; height: 18px; fill: currentColor; }
+.welcome-github-link:hover { transform: translateY(-2px); background: #10231e; color: #fff; }
+.welcome-github-link:focus-visible { outline: 2px solid #0f6b55; outline-offset: 2px; }
 .welcome-language-switch {
   display: grid;
   grid-template-columns: 1fr 1fr;
