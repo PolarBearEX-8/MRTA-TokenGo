@@ -956,26 +956,29 @@ body.simulate-screen .shell { box-shadow: none; }
   padding: 0;
   background: #faf9f4;
 }
+/* --shell-pad is shared so the full-bleed train band can cancel it exactly. */
 .welcome-shell {
+  --shell-pad: clamp(22px, 4vw, 60px);
   width: 100%;
   min-height: 100dvh;
-  grid-template-columns: minmax(0, 1.02fr) minmax(0, .98fr);
+  grid-template-columns: 1fr;
   grid-template-rows: auto 1fr auto;
-  gap: 14px clamp(24px, 3vw, 48px);
-  padding: 25px clamp(22px, 4vw, 60px) 22px;
+  gap: 14px;
+  padding: 18px var(--shell-pad) 20px;
   border: 0;
   border-radius: 0;
   background: #faf9f4;
   box-shadow: none;
 }
+/* The bottom padding biases the centred block upward, clearing the train band. */
 .welcome-main {
   grid-column: 1;
   grid-row: 2;
   display: grid;
   align-content: center;
-  justify-items: start;
+  justify-items: center;
   gap: clamp(26px, 4vh, 44px);
-  padding: 20px 0;
+  padding: 0 0 clamp(22px, 4vh, 48px);
 }
 .welcome-header { grid-column: 1 / -1; }
 .welcome-header-actions { display: flex; align-items: center; gap: 12px; }
@@ -1005,9 +1008,9 @@ body.simulate-screen .shell { box-shadow: none; }
 }
 /* Spacing between the hero and the action cards is owned by .welcome-main's gap. */
 .welcome-hero {
-  max-width: 620px;
+  max-width: 780px;
   padding: 0;
-  text-align: left;
+  text-align: center;
 }
 .welcome-hero h1 {
   margin: 11px 0 12px;
@@ -1015,37 +1018,66 @@ body.simulate-screen .shell { box-shadow: none; }
   line-height: 1.04;
   letter-spacing: -2.4px;
 }
-.welcome-hero p { max-width: 520px; margin: 0; font-size: 13px; line-height: 1.65; }
+.welcome-hero p { max-width: 560px; margin: 0 auto; font-size: 13px; line-height: 1.65; }
 .welcome-actions {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
-  width: min(100%, 620px);
+  width: min(100%, 960px);
 }
+/* Model showcase — its own screen, same frame as the interactive map page. */
+.model-page {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 18px;
+  min-height: 100dvh;
+  padding: 28px;
+  background: #e8eee9;
+  color: #10231e;
+}
+.model-header {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  width: min(100%, 1200px);
+  margin: 0 auto;
+}
+.model-header > div { flex: 1; }
+.model-header span { color: #0f6b55; font: 700 10px Inter; letter-spacing: 1.3px; }
+.model-header h1 { margin: 4px 0 0; font: 700 32px/1.2 'Noto Sans Thai'; }
 /* The stage owns the canvas; the caption sits outside it so WebGL never repaints over text. */
-.welcome-showcase {
+.model-stage-card {
   position: relative;
-  grid-column: 2;
-  grid-row: 2;
   display: grid;
   place-items: center;
-  min-height: min(56vh, 460px);
-  border-radius: 26px;
-  background: radial-gradient(circle at 50% 45%, #f2f3ec 0%, #eceee5 55%, #e7e9e0 100%);
+  width: min(100%, 1200px);
+  min-height: 320px;
+  margin: 0 auto;
+  overflow: hidden;
+  border: 1px solid #d8e2db;
+  border-radius: 24px;
+  background: radial-gradient(circle at 50% 45%, #fbfcf8 0%, #f1f4ee 55%, #e9ede7 100%);
+  box-shadow: 0 12px 32px #163b2b10;
 }
-.welcome-showcase-stage { position: absolute; inset: 0; }
-.welcome-showcase-stage canvas { display: block; cursor: grab; }
-.welcome-showcase-stage canvas:active { cursor: grabbing; }
-.welcome-showcase-note { color: #8b968f; font: 500 11px 'Noto Sans Thai'; }
-.welcome-showcase-caption {
+.model-stage { position: absolute; inset: 0; }
+.model-stage canvas { display: block; cursor: grab; }
+.model-stage canvas:active { cursor: grabbing; }
+.model-note { color: #8b968f; font: 500 11px 'Noto Sans Thai'; }
+.model-caption {
   position: absolute;
-  bottom: 16px;
+  bottom: 18px;
   left: 50%;
   transform: translateX(-50%);
   color: #8b968f;
   font: 600 10px Inter;
   letter-spacing: .6px;
   pointer-events: none;
+}
+@media (max-width: 700px) {
+  .model-page { padding: 18px 14px; gap: 12px; }
+  .model-header { align-items: flex-start; gap: 9px; }
+  .model-header h1 { font-size: 23px; }
+  .model-stage-card { border-radius: 20px; }
 }
 /* Rows: icon / title / description / arrow. The 1fr on the description row pins
    the arrow to the bottom so both cards align even when descriptions differ in length. */
@@ -1074,30 +1106,68 @@ body.simulate-screen .shell { box-shadow: none; }
   color: var(--mint);
 }
 .welcome-action.map .welcome-action-icon { background: #2b64d8; color: #fff; }
+.welcome-action.model .welcome-action-icon { background: #7d4eb6; color: #fff; }
 .welcome-action-icon svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; }
 .welcome-action b { font: 700 17px 'Noto Sans Thai'; }
 .welcome-action small { margin-top: 6px; color: #6f7e78; font-size: 12px; line-height: 1.6; }
 .welcome-action-arrow { margin-top: 18px; color: #10231e; font-size: 17px; transition: transform .18s ease; }
 .welcome-action.map .welcome-action-arrow { color: #2b64d8; }
+.welcome-action.model .welcome-action-arrow { color: #7d4eb6; }
 .welcome-action:hover .welcome-action-arrow { transform: translateX(5px); }
 @media (prefers-reduced-motion: reduce) {
   .welcome-action, .welcome-action-arrow { transition: none; }
   .welcome-action:hover, .welcome-action:hover .welcome-action-arrow { transform: none; }
 }
-.welcome-footer { grid-column: 1 / -1; grid-row: 3; }
+/* Full-bleed band: negative margins cancel the shell padding so the train runs edge to edge. */
+.welcome-train {
+  position: relative;
+  grid-column: 1 / -1;
+  grid-row: 3;
+  height: 52px;
+  margin: 0 calc(-1 * var(--shell-pad));
+  overflow: hidden;
+  pointer-events: none;
+}
+.welcome-train-rail {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 6px;
+  height: 2px;
+  border-radius: 1px;
+  background: #e0ddd4;
+}
+/* -100% is the car's own width, so the entry point stays correct at any car size. */
+.welcome-train-car {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 340px;
+  height: 52px;
+  animation: welcome-train-run 38s linear infinite;
+}
+.welcome-train-car svg { display: block; width: 100%; height: 100%; }
+@keyframes welcome-train-run {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(100vw); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .welcome-train-car { animation: none; transform: translateX(8vw); }
+}
 
 @media (max-width: 700px) {
   .welcome-page { padding: 0; }
   .welcome-shell {
+    --shell-pad: 20px;
     min-height: 100dvh;
     grid-template-columns: 1fr;
-    grid-template-rows: auto auto auto auto;
+    grid-template-rows: auto 1fr auto;
     gap: 10px;
-    padding: 23px 20px 18px;
+    padding: 18px var(--shell-pad) 14px;
     border: 0;
     border-radius: 0;
   }
-  .welcome-main { grid-column: 1; grid-row: 2; justify-items: stretch; gap: 26px; padding: 8px 0; }
+  .welcome-main { grid-column: 1; grid-row: 2; justify-items: stretch; gap: 26px; padding: 0 0 18px; }
   .welcome-hero {
     justify-self: stretch;
     text-align: left;
@@ -1109,8 +1179,9 @@ body.simulate-screen .shell { box-shadow: none; }
   .welcome-action-icon { width: 40px; height: 40px; margin-bottom: 12px; border-radius: 12px; }
   .welcome-action b { font-size: 15px; }
   .welcome-action-arrow { margin-top: 12px; }
-  .welcome-showcase { grid-column: 1; grid-row: 3; min-height: 300px; border-radius: 20px; }
-  .welcome-footer { grid-column: 1; grid-row: 4; }
+  .welcome-train { grid-row: 3; height: 38px; }
+  .welcome-train-car { width: 240px; height: 38px; }
+  .welcome-train-rail { bottom: 4px; }
   .welcome-header-actions { gap: 7px; }
   .welcome-status { display: none; }
 }

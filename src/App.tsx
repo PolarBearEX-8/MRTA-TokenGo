@@ -174,6 +174,8 @@ const thaiEnglishPhrases: [string, string][] = [
   ['เริ่มต้นได้ที่นี่', 'Start right here'],
   ['เข้าสู่ Simulate App', 'Enter Simulate App'],
   ['ทดลองใช้แอปจอง Token แบบจำลอง', 'Try the simulated Token-booking app'],
+  ['ดูโมเดล 3 มิติของ MATA', 'View the MATA 3D model'],
+  ['โมเดล MATA', 'MATA model'],
   ['กำลังโหลดโมเดล', 'Loading model'],
   ['แสดงโมเดลไม่ได้', 'Model unavailable'],
   ['ลากเพื่อหมุน', 'Drag to rotate'],
@@ -943,7 +945,7 @@ function Nav({ view, go }: { view: View; go: Go }) {
 // Autodesk ATF exports the part Z-up; three.js is Y-up, so the long axis needs laying upright.
 const modelUpAxisFix = -Math.PI / 2;
 
-function ModelShowcase() {
+function ModelStage() {
   const mountRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
 
@@ -1034,20 +1036,73 @@ function ModelShowcase() {
     return () => { disposed = true; teardown(); };
   }, []);
 
-  return <div className="welcome-showcase">
-    <div className="welcome-showcase-stage" ref={mountRef} />
-    {status === 'loading' && <span className="welcome-showcase-note">กำลังโหลดโมเดล</span>}
-    {status === 'error' && <span className="welcome-showcase-note">แสดงโมเดลไม่ได้</span>}
-    {status === 'ready' && <span className="welcome-showcase-caption">MATA · ลากเพื่อหมุน</span>}
+  return <>
+    <div className="model-stage" ref={mountRef} />
+    {status === 'loading' && <span className="model-note">กำลังโหลดโมเดล</span>}
+    {status === 'error' && <span className="model-note">แสดงโมเดลไม่ได้</span>}
+    {status === 'ready' && <span className="model-caption">MATA · ลากเพื่อหมุน</span>}
+  </>;
+}
+
+// Reaching this screen is what pulls in the three.js chunk — the welcome page never loads it.
+function ModelShowcasePage({ onBack }: { onBack: () => void }) {
+  return <main className="model-page">
+    <header className="model-header">
+      <button className="map-back" onClick={onBack}>← กลับ Welcome</button>
+      <div><span>3D MODEL SHOWCASE</span><h1>โมเดล MATA</h1></div>
+    </header>
+    <section className="model-stage-card"><ModelStage /></section>
+  </main>;
+}
+
+// Purely decorative, so it stays out of the accessibility tree. Motion lives in CSS
+// (transform-only) to keep the loop off the main thread.
+function WelcomeTrain() {
+  return <div className="welcome-train" aria-hidden="true">
+    <span className="welcome-train-rail" />
+    <div className="welcome-train-car">
+      <svg viewBox="0 0 340 52" fill="none">
+        <rect x="4" y="8" width="100" height="29" rx="7" fill="#10231e" />
+        <rect x="110" y="8" width="100" height="29" rx="7" fill="#10231e" />
+        <path d="M216 37V15a7 7 0 0 1 7-7h73c22 0 36 12 36 24v5Z" fill="#10231e" />
+        <g fill="#d9f47c">
+          <rect x="15" y="14" width="15" height="11" rx="2" />
+          <rect x="36" y="14" width="15" height="11" rx="2" />
+          <rect x="57" y="14" width="15" height="11" rx="2" />
+          <rect x="78" y="14" width="15" height="11" rx="2" />
+          <rect x="121" y="14" width="15" height="11" rx="2" />
+          <rect x="142" y="14" width="15" height="11" rx="2" />
+          <rect x="163" y="14" width="15" height="11" rx="2" />
+          <rect x="184" y="14" width="15" height="11" rx="2" />
+          <rect x="227" y="14" width="15" height="11" rx="2" />
+          <rect x="248" y="14" width="15" height="11" rx="2" />
+          <rect x="269" y="14" width="15" height="11" rx="2" />
+          <path d="M292 14h6c11 0 19 6 23 11h-29a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2Z" />
+        </g>
+        <g fill="#2b64d8">
+          <rect x="4" y="27" width="100" height="2" />
+          <rect x="110" y="27" width="100" height="2" />
+          <rect x="216" y="27" width="106" height="2" />
+        </g>
+        <g fill="#3d4c46">
+          <circle cx="22" cy="40.5" r="3.5" />
+          <circle cx="86" cy="40.5" r="3.5" />
+          <circle cx="128" cy="40.5" r="3.5" />
+          <circle cx="192" cy="40.5" r="3.5" />
+          <circle cx="234" cy="40.5" r="3.5" />
+          <circle cx="300" cy="40.5" r="3.5" />
+        </g>
+      </svg>
+    </div>
   </div>;
 }
 
-function WelcomePage({ onSimulate, onInteractiveMap, language, setLanguage }: { onSimulate: () => void; onInteractiveMap: () => void; language: Language; setLanguage: (language: Language) => void }) {
-  return <main className="welcome-page"><section className="welcome-shell"><header className="welcome-header"><div className="welcome-brand"><span className="welcome-mark">M</span><span>MRT<span> - TokenGo</span></span></div><div className="welcome-header-actions"><span className="welcome-status"><i/> Blue Line</span><div className="welcome-language-switch" role="group" aria-label="ภาษา"><button type="button" className={language === 'th' ? 'active' : ''} onClick={() => setLanguage('th')} aria-pressed={language === 'th'}>TH</button><button type="button" className={language === 'en' ? 'active' : ''} onClick={() => setLanguage('en')} aria-pressed={language === 'en'}>EN</button></div></div></header><div className="welcome-main"><div className="welcome-hero"><span className="welcome-kicker">SMART TRANSIT TOKEN</span><h1>เดินทางง่ายขึ้น<br/><em>เริ่มต้นได้ที่นี่</em></h1><p>วางแผนเส้นทาง จอง Token และติดตามการเดินทางของคุณในที่เดียว</p></div><div className="welcome-actions"><button type="button" className="welcome-action" onClick={onSimulate}><span className="welcome-action-icon"><Icon name="home"/></span><b>เข้าสู่ Simulate App</b><small>ทดลองใช้แอปจอง Token แบบจำลอง</small><span className="welcome-action-arrow" aria-hidden="true">→</span></button><button type="button" className="welcome-action map" onClick={onInteractiveMap}><span className="welcome-action-icon"><Icon name="map"/></span><b>แผนที่ Interactive</b><small>เลือกสถานีบนแผนที่ MRT และดูค่าโดยสารทันที</small><span className="welcome-action-arrow" aria-hidden="true">→</span></button></div></div><ModelShowcase/><footer className="welcome-footer"><span>พร้อมเดินทางไปกับคุณ</span><span>v1.0 · MRT Bangkok</span></footer></section></main>;
+function WelcomePage({ onSimulate, onInteractiveMap, onModelShowcase, language, setLanguage }: { onSimulate: () => void; onInteractiveMap: () => void; onModelShowcase: () => void; language: Language; setLanguage: (language: Language) => void }) {
+  return <main className="welcome-page"><section className="welcome-shell"><header className="welcome-header"><div className="welcome-brand"><img className="welcome-mark" src={publicAsset('icons/tokengo-logo.png')} alt="" width={38} height={38}/><span>MRT<span> - TokenGo</span></span></div><div className="welcome-header-actions"><span className="welcome-status"><i/> Blue Line</span><div className="welcome-language-switch" role="group" aria-label="ภาษา"><button type="button" className={language === 'th' ? 'active' : ''} onClick={() => setLanguage('th')} aria-pressed={language === 'th'}>TH</button><button type="button" className={language === 'en' ? 'active' : ''} onClick={() => setLanguage('en')} aria-pressed={language === 'en'}>EN</button></div></div></header><div className="welcome-main"><div className="welcome-hero"><span className="welcome-kicker">SMART TRANSIT TOKEN</span><h1>เดินทางง่ายขึ้น<br/><em>เริ่มต้นได้ที่นี่</em></h1><p>วางแผนเส้นทาง จอง Token และติดตามการเดินทางของคุณในที่เดียว</p></div><div className="welcome-actions"><button type="button" className="welcome-action" onClick={onSimulate}><span className="welcome-action-icon"><Icon name="home"/></span><b>เข้าสู่ Simulate App</b><small>ทดลองใช้แอปจอง Token แบบจำลอง</small><span className="welcome-action-arrow" aria-hidden="true">→</span></button><button type="button" className="welcome-action map" onClick={onInteractiveMap}><span className="welcome-action-icon"><Icon name="map"/></span><b>แผนที่ Interactive</b><small>เลือกสถานีบนแผนที่ MRT และดูค่าโดยสารทันที</small><span className="welcome-action-arrow" aria-hidden="true">→</span></button><button type="button" className="welcome-action model" onClick={onModelShowcase}><span className="welcome-action-icon"><Icon name="scan"/></span><b>Model showcase</b><small>ดูโมเดล 3 มิติของ MATA</small><span className="welcome-action-arrow" aria-hidden="true">→</span></button></div></div><WelcomeTrain/></section></main>;
 }
 
 export default function App() {
-  const [screen, setScreen] = useState<'welcome' | 'simulate' | 'interactive-map'>('welcome');
+  const [screen, setScreen] = useState<'welcome' | 'simulate' | 'interactive-map' | 'model'>('welcome');
   const [language, setLanguage] = useState<Language>('th');
   useEffect(() => {
     document.body.classList.toggle('simulate-screen', screen === 'simulate');
@@ -1070,7 +1125,8 @@ export default function App() {
   }, [language, screen]);
   if (screen === 'simulate') return <SimulateApp onWelcome={() => setScreen('welcome')} language={language} setLanguage={setLanguage}/>;
   if (screen === 'interactive-map') return <InteractiveMapPage onBack={() => setScreen('welcome')}/>;
-  return <WelcomePage onSimulate={() => setScreen('simulate')} onInteractiveMap={() => setScreen('interactive-map')} language={language} setLanguage={setLanguage}/>;
+  if (screen === 'model') return <ModelShowcasePage onBack={() => setScreen('welcome')}/>;
+  return <WelcomePage onSimulate={() => setScreen('simulate')} onInteractiveMap={() => setScreen('interactive-map')} onModelShowcase={() => setScreen('model')} language={language} setLanguage={setLanguage}/>;
 }
 
 const blueMapHotspots = [
